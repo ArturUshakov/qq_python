@@ -1,6 +1,5 @@
 # -*- mode: python ; coding: utf-8 -*-
-from PyInstaller.utils.hooks import collect_all
-from PyInstaller.building.build_main import Analysis, PYZ, EXE, COLLECT
+from PyInstaller.utils.hooks import collect_all, collect_dynamic_libs
 
 datas = []
 binaries = []
@@ -11,7 +10,10 @@ hiddenimports = [
     'urllib3',
     'chardet',
     'simplejson',
-    'socks'
+    'socks',
+    'colorama',  # добавлено
+    'matplotlib',  # добавлено
+    'tqdm',  # добавлено
 ]
 
 # Сбор данных для requests
@@ -19,6 +21,9 @@ tmp_ret = collect_all('requests')
 datas += tmp_ret[0]
 binaries += tmp_ret[1]
 hiddenimports += tmp_ret[2]
+
+# Сбор динамических библиотек
+binaries += collect_dynamic_libs('python')
 
 # Анализ скрипта
 a = Analysis(

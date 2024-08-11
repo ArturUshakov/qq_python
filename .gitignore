@@ -1,1 +1,4 @@
-/venv/
+venv
+qq_app.log
+dist
+build

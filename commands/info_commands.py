@@ -8,15 +8,21 @@ class ScriptInfoCommand(Command):
 
     def execute(self, *args):
         version = get_version()
-        print(print_colored("bright_blue", "==============================================================="))
-        print(print_colored("bright_blue", "                       QQ Script Information                    "))
-        print(print_colored("bright_blue", "==============================================================="))
-        print(f"{print_colored('bright_white', 'Repository:'):15} {print_colored('bright_green', 'https://github.com/ArturUshakov/qq')}")
-        print(f"{print_colored('bright_white', 'Creator:'):15} {print_colored('bright_green', 'https://t.me/Mariores')}")
-        print(f"{print_colored('bright_white', 'Version:'):15} {print_colored('bright_yellow', version)}")
-        print(print_colored("bright_red", "Latest Changes:"))
+        border_char = "═"
+        width = 65
+
+        def center_text(text, fill_char=" "):
+            return text.center(width, fill_char)
+
+        print(print_colored("bright_blue", border_char * width))
+        print(print_colored("bright_blue", center_text("QQ Script Information", border_char)))
+        print(print_colored("bright_blue", border_char * width))
+        print(f"{print_colored('bright_white', 'Repository:'):>15} {print_colored('bright_green', 'https://github.com/ArturUshakov/qq')}")
+        print(f"{print_colored('bright_white', 'Creator:'):>15} {print_colored('bright_green', 'https://t.me/Mariores')}")
+        print(f"{print_colored('bright_white', 'Version:'):>15} {print_colored('bright_yellow', version)}")
+        print(print_colored("bright_red", "\nLatest Changes:"))
         TagInfo().get_latest_tag_info()
-        print(print_colored("bright_blue", "===============================================================\n"))
+        print(print_colored("bright_blue", border_char * width + "\n"))
 
 class TagInfo:
     def get_latest_tag_info(self):
@@ -56,9 +62,9 @@ class TagInfo:
                 tag, date = parts
                 print(f"{print_colored('bright_green', tag)} {print_colored('bright_yellow', date)}")
         elif line.startswith("- "):
-            print(f"  {print_colored('bright_blue', line)}")
+            print(f"  {print_colored('bright_cyan', '•')} {print_colored('bright_blue', line[2:])}")
         elif line.startswith("  - "):
-            print(f"    {print_colored('bright_blue', line)}")
+            print(f"    {print_colored('bright_cyan', '›')} {print_colored('bright_blue', line[4:])}")
         else:
             print(line)
 

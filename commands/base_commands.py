@@ -6,15 +6,26 @@ class PrintHelpCommand(Command):
         super().__init__(["-h", "help"], "Выводит это сообщение")
 
     def execute(self, *args):
-        print(print_colored("bright_blue", "\n==================== Справка ===================="))
-        print_colored("bright_blue", "Доступные команды:")
+        width = 60
+        border_char = "═"
+
+        def center_text(text):
+            return text.center(width)
+
+        print(print_colored("bright_blue", f"\n{border_char * width}"))
+        print(print_colored("bright_blue", center_text("Справка")))
+        print(print_colored("bright_blue", f"{border_char * width}"))
+
         command_registry = self.registry
+        max_name_length = max(
+            len(', '.join(command.names)) for group in command_registry.groups for command in command_registry.get_group_commands(group).values()
+        ) + 5
+
         for group, description in command_registry.groups.items():
-            print(print_colored("bright_blue", f"\n===== {description} ====="))
+            print(print_colored("bright_magenta", f"\n=== {description} ==="))
             for command in command_registry.get_group_commands(group).values():
                 names = ', '.join(command.names)
-                print(f"  {print_colored('bright_green', f'{names:30}')}{print_colored('bright_yellow', command.description)}")
-        print(print_colored("bright_blue", "================================================"))
+                print(f"{print_colored('bright_green', f'  {names:<{max_name_length}}')} {print_colored('bright_yellow', command.description)}")
 
 class BaseCommand:
     @staticmethod
