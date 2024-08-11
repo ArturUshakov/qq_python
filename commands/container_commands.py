@@ -1,9 +1,11 @@
 import subprocess
+from colorama import Fore, Style, init
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from queue import Queue
 from tqdm import tqdm
-from utils import print_colored
 from .command_registry import Command
+
+init(autoreset=True)
 
 class StopAllContainersCommand(Command):
     def __init__(self):
@@ -12,11 +14,10 @@ class StopAllContainersCommand(Command):
     def stop_container(self, container_id, container_name):
         try:
             process = subprocess.Popen(["docker", "stop", container_id], stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
-            stdout, stderr = process.communicate()
+            _, stderr = process.communicate()
             if process.returncode == 0:
                 return container_name, True
-            else:
-                return container_name, False, stderr.decode().strip()
+            return container_name, False, stderr.decode().strip()
         except Exception as e:
             return container_name, False, str(e)
 
@@ -32,10 +33,10 @@ class StopAllContainersCommand(Command):
         container_data = result.stdout.strip().splitlines()
 
         if not container_data:
-            print(print_colored("bright_red", "Нет запущенных контейнеров для остановки."))
+            print(Fore.RED + "🚫 Нет запущенных контейнеров для остановки.")
             return
 
-        print(print_colored("bright_blue", "Остановка всех запущенных контейнеров:"))
+        print(Fore.BLUE + "🔄 Остановка всех запущенных контейнеров:")
 
         container_queue = Queue()
         max_name_length = 0
@@ -49,51 +50,10 @@ class StopAllContainersCommand(Command):
         failed_containers = []
 
         with ThreadPoolExecutor(max_workers=20) as executor:
-            futures = {executor.submit(self.stop_container, container_id, container_name): container_name for container_id, container_name in [container_queue.get() for _ in range(container_queue.qsize())]}
+            futures = {executor.submit(self.stop_container, container_id, container_name): container_name
+                       for container_id, container_name in [container_queue.get() for _ in range(container_queue.qsize())]}
 
-            for future in tqdm(as_completed(futures), total=len(futures), desc="Остановка контейнеров", unit="container"):
-                container_name, success, *error = future.result()
-                if success:
-                    stopped_containers.append(container_name)
-                else:
-                    failed_containers.append((container_name, error[0]))
-
-        status_msg = "остановлен"
-
-        for name in stopped_containers:
-            print(f"{print_colored('bright_green', name.ljust(max_name_length))} {print_colored('bright_red', status_msg)}")
-
-        if failed_containers:
-            print(print_colored("bright_red", "\nНекоторые контейнеры не удалось остановить:"))
-            for name, error in failed_containers:
-                print(f"{print_colored('bright_red', name.ljust(max_name_length))}: {print_colored('bright_yellow', error)}")
-
-    def stop_filtered_containers(self, filter_option):
-        result = subprocess.run(["docker", "ps", "--filter", f"name={filter_option}", "--format", "{{.ID}}\t{{.Names}}"], capture_output=True, text=True)
-        container_data = result.stdout.strip().splitlines()
-
-        if not container_data:
-            print(print_colored("bright_red", f"Контейнеры, соответствующие фильтру '{filter_option}', не найдены."))
-            return
-
-        print(print_colored("bright_blue", f"Остановка контейнеров, соответствующих фильтру {print_colored('bright_yellow', filter_option)}:"))
-        print(print_colored("bright_blue", "-----------------------------------------------------------"))
-
-        container_queue = Queue()
-        max_name_length = 0
-
-        for cid in container_data:
-            container_id, container_name = cid.split('\t')
-            container_queue.put((container_id, container_name))
-            max_name_length = max(max_name_length, len(container_name))
-
-        stopped_containers = []
-        failed_containers = []
-
-        with ThreadPoolExecutor(max_workers=20) as executor:
-            futures = {executor.submit(self.stop_container, container_id, container_name): container_name for container_id, container_name in [container_queue.get() for _ in range(container_queue.qsize())]}
-
-            with tqdm(total=len(futures), desc="Остановка контейнеров", unit="container") as pbar:
+            with tqdm(total=len(futures), desc="Остановка контейнеров", unit="container", ncols=100) as pbar:
                 for future in as_completed(futures):
                     container_name, success, *error = future.result()
                     if success:
@@ -105,37 +65,56 @@ class StopAllContainersCommand(Command):
         status_msg = "остановлен"
 
         for name in stopped_containers:
-            print(f"{print_colored('bright_green', name.ljust(max_name_length))} {print_colored('bright_red', status_msg)}")
+            print(f"{Fore.GREEN}{name.ljust(max_name_length)} {Fore.RED}{status_msg}")
 
         if failed_containers:
-            print(print_colored("bright_red", "\nНекоторые контейнеры не удалось остановить:"))
+            print(Fore.RED + "\n❗ Некоторые контейнеры не удалось остановить:")
             for name, error in failed_containers:
-                print(f"{print_colored('bright_red', name.ljust(max_name_length))}: {print_colored('bright_yellow', error)}")
+                print(f"{Fore.RED}{name.ljust(max_name_length)}: {Fore.YELLOW}{error}")
 
-        print(print_colored("bright_blue", "-----------------------------------------------------------"))
+    def stop_filtered_containers(self, filter_option):
+        result = subprocess.run(["docker", "ps", "--filter", f"name={filter_option}", "--format", "{{.ID}}\t{{.Names}}"], capture_output=True, text=True)
+        container_data = result.stdout.strip().splitlines()
 
-class GetExternalIpCommand(Command):
-    def __init__(self):
-        super().__init__(["-eip", "external-ip"], "Выводит ip для внешнего доступа")
+        if not container_data:
+            print(Fore.RED + f"🚫 Контейнеры, соответствующие фильтру '{filter_option}', не найдены.")
+            return
 
-    def execute(self, *args):
-        try:
-            result = subprocess.run(["ifconfig"], capture_output=True, text=True)
-            ip_lines = result.stdout.split('\n')
-            external_ip = None
+        print(Fore.BLUE + f"🔍 Остановка контейнеров, соответствующих фильтру {Fore.YELLOW}{filter_option}{Fore.BLUE}:")
 
-            for line in ip_lines:
-                if 'inet ' in line and not line.strip().startswith('127.'):
-                    external_ip = line.split()[1]
-                    break
+        container_queue = Queue()
+        max_name_length = 0
 
-            if external_ip:
-                print(f"IP для внешнего доступа: {print_colored('bright_green', external_ip)}")
-            else:
-                print(print_colored("bright_red", "Не удалось определить внешний IP-адрес."))
+        for cid in container_data:
+            container_id, container_name = cid.split('\t')
+            container_queue.put((container_id, container_name))
+            max_name_length = max(max_name_length, len(container_name))
 
-        except Exception as e:
-            print(print_colored("bright_red", f"Ошибка при получении внешнего IP-адреса: {str(e)}"))
+        stopped_containers = []
+        failed_containers = []
+
+        with ThreadPoolExecutor(max_workers=20) as executor:
+            futures = {executor.submit(self.stop_container, container_id, container_name): container_name
+                       for container_id, container_name in [container_queue.get() for _ in range(container_queue.qsize())]}
+
+            with tqdm(total=len(futures), desc="Остановка контейнеров", unit="container", ncols=100) as pbar:
+                for future in as_completed(futures):
+                    container_name, success, *error = future.result()
+                    if success:
+                        stopped_containers.append(container_name)
+                    else:
+                        failed_containers.append((container_name, error[0]))
+                    pbar.update(1)
+
+        status_msg = "остановлен"
+
+        for name in stopped_containers:
+            print(f"{Fore.GREEN}{name.ljust(max_name_length)} {Fore.RED}{status_msg}")
+
+        if failed_containers:
+            print(Fore.RED + "\n❗ Некоторые контейнеры не удалось остановить:")
+            for name, error in failed_containers:
+                print(f"{Fore.RED}{name.ljust(max_name_length)}: {Fore.YELLOW}{error}")
 
 class ListContainersCommand(Command):
     def __init__(self, names, filter_option, title, format_option):
@@ -160,11 +139,11 @@ class ListContainersCommand(Command):
             else:
                 compose_projects[project] = [(name, status)]
 
-        print(print_colored("bright_blue", self.title))
+        print(Fore.BLUE + self.title)
         for project, containers in compose_projects.items():
-            print(print_colored("bright_yellow", f"\nПроект: {project}"))
+            print(Fore.YELLOW + f"\nПроект: {project}")
             for name, status in containers:
-                print(f"{print_colored('bright_green', name):55} {print_colored('bright_cyan', status)}")
+                print(f"{Fore.GREEN}{name.ljust(55)} {Fore.CYAN}{status}")
 
     def execute(self, *args):
         self.list_containers()
@@ -182,8 +161,8 @@ class ListImagesCommand(Command):
         super().__init__(["-li", "list-images"], "Выводит список всех образов")
 
     def execute(self, *args):
-        print(print_colored("bright_blue", "Список образов:"))
-        print(f"{print_colored('bright_blue', 'ID'):25} {print_colored('bright_blue', 'РЕПОЗИТОРИЙ'):60} {print_colored('bright_blue', 'ТЕГ'):27} {print_colored('bright_blue', 'РАЗМЕР'):15}")
+        print(Fore.BLUE + "📦 Список образов:")
+        print(f"{Fore.BLUE}{'ID':25} {Fore.BLUE}{'РЕПОЗИТОРИЙ':60} {Fore.BLUE}{'ТЕГ':27} {Fore.BLUE}{'РАЗМЕР':15}")
 
         try:
             result = subprocess.run(
@@ -194,16 +173,64 @@ class ListImagesCommand(Command):
 
             for image in images:
                 id, repository, tag, size = image.split('\t')
-                print(f"{print_colored('bright_green', id):25} {print_colored('bright_yellow', repository):60} {print_colored('bright_cyan', tag):27} {print_colored('bright_red', size):15}")
+                print(f"{Fore.GREEN}{id:25} {Fore.YELLOW}{repository:60} {Fore.CYAN}{tag:27} {Fore.RED}{size:15}")
 
         except subprocess.CalledProcessError:
-            print(print_colored("bright_red", "Ошибка при получении списка образов Docker."))
+            print(Fore.RED + "❌ Ошибка при получении списка образов Docker.")
+
+class RemoveImageCommand(Command):
+    def __init__(self):
+        super().__init__(["-ri", "remove-image"], "Удаляет image по указанному тегу")
+
+    def execute(self, *args):
+        if not args:
+            print(f"{Fore.RED}{Style.BRIGHT}✘ Ошибка: Пожалуйста, укажите тег версии для удаления.{Style.RESET_ALL}")
+            return
+
+        version = args[0]
+
+        if version == "<none>":
+            cleanup_docker_images()
+            return
+
+        try:
+            result = subprocess.run(
+                ["docker", "images", "--format", "{{.Repository}}\t{{.Tag}}\t{{.ID}}"],
+                capture_output=True, text=True, check=True
+            )
+            images = result.stdout.strip().splitlines()
+            images_to_remove = [image_id for repo, tag, image_id in (img.split('\t') for img in images) if tag == version]
+
+            if not images_to_remove:
+                print(f"{Fore.YELLOW}{Style.BRIGHT}⚠ Образы с тегом '{version}' не найдены.{Style.RESET_ALL}")
+                return
+
+            for image_id in images_to_remove:
+                subprocess.run(["docker", "rmi", image_id], check=True)
+                print(f"{Fore.GREEN}{Style.BRIGHT}✔ Удален образ с ID: {image_id}{Style.RESET_ALL}")
+
+        except subprocess.CalledProcessError:
+            print(f"{Fore.RED}{Style.BRIGHT}✘ Ошибка при удалении образов Docker.{Style.RESET_ALL}")
+
+def cleanup_docker_images():
+    try:
+        result = subprocess.run(["docker", "images", "-f", "dangling=true", "-q"], capture_output=True, text=True)
+        image_ids = result.stdout.strip().splitlines()
+
+        if image_ids:
+            subprocess.run(["docker", "rmi"] + image_ids, check=True)
+            print(f"{Fore.GREEN}{Style.BRIGHT}✔ Все images <none> успешно очищены!{Style.RESET_ALL}")
+        else:
+            print(f"{Fore.GREEN}{Style.BRIGHT}ℹ Нет images <none> для очистки.{Style.RESET_ALL}")
+
+    except subprocess.CalledProcessError:
+        print(f"{Fore.RED}{Style.BRIGHT}✘ Ошибка при очистке images <none>.{Style.RESET_ALL}")
 
 class ContainerCommand:
     @staticmethod
     def register(registry):
-        registry.register_command(GetExternalIpCommand(), "container")
+        registry.register_command(StopAllContainersCommand(), "container")
         registry.register_command(ListRunningContainersCommand(), "container")
         registry.register_command(ListAllContainersCommand(), "container")
-        registry.register_command(StopAllContainersCommand(), "container")
         registry.register_command(ListImagesCommand(), "container")
+        registry.register_command(RemoveImageCommand(), "container")

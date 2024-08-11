@@ -1,29 +1,17 @@
 # -*- mode: python ; coding: utf-8 -*-
-from PyInstaller.utils.hooks import collect_all, collect_dynamic_libs
+from PyInstaller.utils.hooks import collect_all
 
 datas = []
 binaries = []
 hiddenimports = [
-    'cryptography',
-    'OpenSSL',
-    'requests',
-    'urllib3',
-    'chardet',
-    'simplejson',
-    'socks',
-    'colorama',  # добавлено
-    'matplotlib',  # добавлено
-    'tqdm',  # добавлено
+    'tqdm',
 ]
 
-# Сбор данных для requests
-tmp_ret = collect_all('requests')
+# Сбор данных для tqdm (если используется)
+tmp_ret = collect_all('tqdm')
 datas += tmp_ret[0]
 binaries += tmp_ret[1]
 hiddenimports += tmp_ret[2]
-
-# Сбор динамических библиотек
-binaries += collect_dynamic_libs('python')
 
 # Анализ скрипта
 a = Analysis(
@@ -35,21 +23,38 @@ a = Analysis(
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=[],
-    noarchive=False,
-    optimize=0,
+    excludes=[
+        'multiprocessing',  # Если не используется, исключите
+        'pyimod02_importers',  # Используется только в PyInstaller, можно исключить
+        'cryptography',  # Если не используется шифрование, можно исключить
+        'OpenSSL',  # Если не используется SSL, можно исключить
+        'tqdm.contrib.discord',  # Если не используется интеграция с Discord
+        'tqdm.contrib.slack',  # Если не используется интеграция с Slack
+        'tqdm.keras',  # Если не используется Keras
+        'dask',  # Если не используется Dask
+        'matplotlib',  # Если не используется Matplotlib
+        'IPython',  # Если не используется IPython
+        'tensorflow',  # Если не используется TensorFlow
+        'socks',  # Если не используется прокси через SOCKS
+        'simplejson',  # Если не используется SimpleJSON
+        'rich',  # Если не используется Rich
+        'pandas',  # Если не используется Pandas
+        'numpy',  # Если не используется NumPy
+    ],
+    noarchive=True,
+    optimize=2,
 )
 
-pyz = PYZ(a.pure)
+pyz = PYZ(a.pure, a.zipped_data, cipher=None)
 
 exe = EXE(
     pyz,
     a.scripts,
     a.binaries,
+    a.zipfiles,
     a.datas,
     [],
     name='qq',
-    debug=False,
     bootloader_ignore_signals=False,
     strip=False,
     upx=True,

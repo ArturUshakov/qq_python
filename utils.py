@@ -81,7 +81,7 @@ def get_latest_version():
         if response.status_code == 200:
             tags = response.json()
             if tags:
-                latest_version = tags[0]['name'].strip('v')  # Убираем префикс 'v' если есть
+                latest_version = tags[0]['name'].strip('v')
                 set_cached_version(latest_version)
                 return latest_version
         return "Не удалось получить последнюю версию."

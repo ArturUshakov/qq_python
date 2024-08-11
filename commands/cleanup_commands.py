@@ -1,6 +1,8 @@
 import subprocess
-from utils import print_colored
+from colorama import Fore, Style, init
 from .command_registry import Command
+
+init(autoreset=True)
 
 class CleanupDockerImagesCommand(Command):
     def __init__(self):
@@ -8,32 +10,32 @@ class CleanupDockerImagesCommand(Command):
 
     def execute(self, *args):
         try:
-            print(print_colored("bright_yellow", "Поиск <none> images..."))
+            print(f"{Fore.YELLOW}Поиск <none> images...{Style.RESET_ALL}")
             result = subprocess.run(["docker", "images", "-f", "dangling=true", "-q"], capture_output=True, text=True)
             image_ids = result.stdout.strip().splitlines()
 
             if image_ids:
-                print(print_colored("bright_yellow", f"Найдено {len(image_ids)} <none> images. Удаление..."))
+                print(f"{Fore.YELLOW}Найдено {len(image_ids)} <none> images. Удаление...{Style.RESET_ALL}")
                 try:
                     subprocess.run(["docker", "rmi"] + image_ids, check=True)
-                    print(print_colored("bright_green", "Все <none> images успешно удалены!"))
+                    print(f"{Fore.GREEN}Все <none> images успешно удалены!{Style.RESET_ALL}")
                 except subprocess.CalledProcessError as e:
-                    print(print_colored("bright_red", f"Ошибка при удалении <none> images: {str(e)}"))
+                    print(f"{Fore.RED}Ошибка при удалении <none> images: {str(e)}{Style.RESET_ALL}")
                     # Попытка принудительного удаления
-                    force_remove = input(print_colored("bright_yellow", "Хотите принудительно удалить эти images? (y/n): ")).lower()
+                    force_remove = input(f"{Fore.YELLOW}Хотите принудительно удалить эти images? (y/n): {Style.RESET_ALL}").lower()
                     if force_remove == 'y':
                         try:
                             subprocess.run(["docker", "rmi", "-f"] + image_ids, check=True)
-                            print(print_colored("bright_green", "Все <none> images успешно удалены принудительно!"))
+                            print(f"{Fore.GREEN}Все <none> images успешно удалены принудительно!{Style.RESET_ALL}")
                         except subprocess.CalledProcessError as e:
-                            print(print_colored("bright_red", f"Ошибка при принудительном удалении <none> images: {str(e)}"))
+                            print(f"{Fore.RED}Ошибка при принудительном удалении <none> images: {str(e)}{Style.RESET_ALL}")
                     else:
-                        print(print_colored("bright_yellow", "Принудительное удаление отменено."))
+                        print(f"{Fore.YELLOW}Принудительное удаление отменено.{Style.RESET_ALL}")
             else:
-                print(print_colored("bright_green", "Нет <none> images для удаления."))
+                print(f"{Fore.GREEN}Нет <none> images для удаления.{Style.RESET_ALL}")
 
         except subprocess.CalledProcessError as e:
-            print(print_colored("bright_red", f"Ошибка при поиске <none> images: {str(e)}"))
+            print(f"{Fore.RED}Ошибка при поиске <none> images: {str(e)}{Style.RESET_ALL}")
 
 class PruneBuilderCommand(Command):
     def __init__(self):
@@ -41,15 +43,15 @@ class PruneBuilderCommand(Command):
 
     def execute(self, *args):
         try:
-            print(print_colored("bright_yellow", "Очистка неиспользуемых данных сборщика..."))
+            print(f"{Fore.YELLOW}Очистка неиспользуемых данных сборщика...{Style.RESET_ALL}")
             result = subprocess.run(["docker", "builder", "prune", "-f"], check=True)
             if result.returncode == 0:
-                print(print_colored("bright_green", "Все неиспользуемые данные сборщика успешно удалены!"))
+                print(f"{Fore.GREEN}Все неиспользуемые данные сборщика успешно удалены!{Style.RESET_ALL}")
             else:
-                print(print_colored("bright_red", "Некоторые данные сборщика не удалось удалить."))
+                print(f"{Fore.RED}Некоторые данные сборщика не удалось удалить.{Style.RESET_ALL}")
 
         except subprocess.CalledProcessError as e:
-            print(print_colored("bright_red", f"Ошибка при очистке данных сборщика: {str(e)}"))
+            print(f"{Fore.RED}Ошибка при очистке данных сборщика: {str(e)}{Style.RESET_ALL}")
 
 class CleanupCommand:
     @staticmethod

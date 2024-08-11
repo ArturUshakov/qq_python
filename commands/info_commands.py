@@ -1,6 +1,9 @@
 import os
+from colorama import Fore, Style, init
 from .command_registry import Command
-from utils import print_colored, get_version
+from utils import get_version
+
+init(autoreset=True)
 
 class ScriptInfoCommand(Command):
     def __init__(self):
@@ -8,27 +11,25 @@ class ScriptInfoCommand(Command):
 
     def execute(self, *args):
         version = get_version()
-        border_char = "═"
+        border_char = "─"
         width = 65
 
         def center_text(text, fill_char=" "):
             return text.center(width, fill_char)
 
-        print(print_colored("bright_blue", border_char * width))
-        print(print_colored("bright_blue", center_text("QQ Script Information", border_char)))
-        print(print_colored("bright_blue", border_char * width))
-        print(f"{print_colored('bright_white', 'Repository:'):>15} {print_colored('bright_green', 'https://github.com/ArturUshakov/qq')}")
-        print(f"{print_colored('bright_white', 'Creator:'):>15} {print_colored('bright_green', 'https://t.me/Mariores')}")
-        print(f"{print_colored('bright_white', 'Version:'):>15} {print_colored('bright_yellow', version)}")
-        print(print_colored("bright_red", "\nLatest Changes:"))
+        print(Fore.LIGHTBLUE_EX + center_text("🔍 Информация о скрипте", border_char) + Style.RESET_ALL)
+        print(f"{Fore.WHITE}{'Repository:':>15} {Fore.CYAN}https://github.com/ArturUshakov/qq{Style.RESET_ALL}")
+        print(f"{Fore.WHITE}{'Creator:':>15} {Fore.CYAN}https://t.me/Mariores{Style.RESET_ALL}")
+        print(f"{Fore.WHITE}{'Version:':>15} {Fore.YELLOW}{version}{Style.RESET_ALL}")
+        print(Fore.RED + "\n🛠️ Последние изменения:" + Style.RESET_ALL)
         TagInfo().get_latest_tag_info()
-        print(print_colored("bright_blue", border_char * width + "\n"))
+        print(Fore.LIGHTBLUE_EX + border_char * width + "\n" + Style.RESET_ALL)
 
 class TagInfo:
     def get_latest_tag_info(self):
         changelog_file = os.path.expanduser("~/qq/CHANGELOG.md")
         if not os.path.isfile(changelog_file):
-            print(print_colored("bright_red", "Файл CHANGELOG.md не найден."))
+            print(Fore.RED + "🚫 Файл CHANGELOG.md не найден." + Style.RESET_ALL)
             return
 
         with open(changelog_file, "r") as f:
@@ -38,35 +39,49 @@ class TagInfo:
         latest_tag_index = None
         for i, line in enumerate(lines):
             if line.startswith("## ["):
-                latest_tag_line = line
+                latest_tag_line = line.strip()
                 latest_tag_index = i
                 break
 
         if not latest_tag_line:
-            print(print_colored("bright_red", "Тэги не найдены в файле CHANGELOG.md."))
+            print(Fore.RED + "🚫 Тэги не найдены в файле CHANGELOG.md." + Style.RESET_ALL)
             return
 
-        output = []
-        for line in lines[latest_tag_index:]:
-            if line.startswith("## [") and output:
+        changes = []
+        current_section = None
+        for line in lines[latest_tag_index + 1:]:
+            if line.startswith("## ["):
                 break
-            output.append(line.strip())
 
-        for line in output:
-            self.process_tag_line(line)
+            line = line.strip()
+            if not line:
+                continue
 
-    def process_tag_line(self, line):
-        if line.startswith("## ["):
-            parts = line.split(" - ")
-            if len(parts) == 2:
-                tag, date = parts
-                print(f"{print_colored('bright_green', tag)} {print_colored('bright_yellow', date)}")
-        elif line.startswith("- "):
-            print(f"  {print_colored('bright_cyan', '•')} {print_colored('bright_blue', line[2:])}")
-        elif line.startswith("  - "):
-            print(f"    {print_colored('bright_cyan', '›')} {print_colored('bright_blue', line[4:])}")
+            if line.startswith("- Реализовано"):
+                current_section = "Реализовано"
+                changes.append(f"\n{Fore.GREEN}{current_section}{Style.RESET_ALL}")
+            elif line.startswith("- Удалено"):
+                current_section = "Удалено"
+                changes.append(f"\n{Fore.RED}{current_section}{Style.RESET_ALL}")
+            elif line.startswith("- Исправлено"):
+                current_section = "Исправлено"
+                changes.append(f"\n{Fore.YELLOW}{current_section}{Style.RESET_ALL}")
+            elif line.startswith("- Изменено"):
+                current_section = "Изменено"
+                changes.append(f"\n{Fore.BLUE}{current_section}{Style.RESET_ALL}")
+            elif line.startswith("- "):
+                if current_section:
+                    changes.append(f"  {Fore.CYAN}•{Style.RESET_ALL} {Fore.BLUE}{line[2:].strip()}{Style.RESET_ALL}")
+            else:
+                if changes and not changes[-1].strip():
+                    changes[-1] = changes[-1].strip()
+
+        if latest_tag_line and changes:
+            print(Fore.LIGHTMAGENTA_EX + "\n🔖 Тег: " + Style.RESET_ALL + latest_tag_line)
+            for line in changes:
+                print(line)
         else:
-            print(line)
+            print(Fore.RED + "🚫 Нет информации о последних изменениях." + Style.RESET_ALL)
 
 class InfoCommand:
     @staticmethod

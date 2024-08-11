@@ -2,8 +2,9 @@ import os
 import subprocess
 import sys
 from .command_registry import Command
-from .tray import start_tray_app
-from utils import print_colored
+from colorama import Fore, Style, init
+
+init(autoreset=True)
 
 class GitIgnoreFileModeCommand(Command):
     def __init__(self):
@@ -12,9 +13,9 @@ class GitIgnoreFileModeCommand(Command):
     def execute(self, *args):
         try:
             subprocess.run(["git", "config", "core.fileMode", "false"], check=True)
-            print(print_colored("bright_green", "Отслеживание изменений прав файлов в Git успешно отключено."))
-        except subprocess.CalledProcessError as e:
-            print(print_colored("bright_red", f"Ошибка: {str(e)}"))
+            print(f"{Fore.GREEN}{Style.BRIGHT}✔ Отслеживание изменений прав файлов в Git успешно отключено.{Style.RESET_ALL}")
+        except subprocess.CalledProcessError:
+            print(f"{Fore.RED}{Style.BRIGHT}✘ Ошибка: Не удалось отключить отслеживание изменений прав файлов в Git.{Style.RESET_ALL}")
 
 class ChmodAllCommand(Command):
     def __init__(self):
@@ -22,11 +23,11 @@ class ChmodAllCommand(Command):
 
     def execute(self, *args):
         try:
-            print(print_colored("bright_yellow", "Изменение прав доступа для всех файлов и директорий в текущей папке..."))
+            print(f"{Fore.YELLOW}{Style.BRIGHT}⚙ Изменение прав доступа для всех файлов и директорий в текущей папке...{Style.RESET_ALL}")
             subprocess.run(["sudo", "chmod", "777", "-R", "."], check=True)
-            print(print_colored("bright_green", "Все файлы и директории в текущей папке успешно получили права 777."))
-        except subprocess.CalledProcessError as e:
-            print(print_colored("bright_red", f"Ошибка при изменении прав доступа: {str(e)}"))
+            print(f"{Fore.GREEN}{Style.BRIGHT}✔ Все файлы и директории в текущей папке успешно получили права 777.{Style.RESET_ALL}")
+        except subprocess.CalledProcessError:
+            print(f"{Fore.RED}{Style.BRIGHT}✘ Ошибка при изменении прав доступа.{Style.RESET_ALL}")
 
 class GeneratePasswordHashCommand(Command):
     def __init__(self):
@@ -34,83 +35,28 @@ class GeneratePasswordHashCommand(Command):
 
     def execute(self, *args):
         if not args:
-            print(print_colored("bright_red", "Ошибка: Пожалуйста, укажите пароль для генерации хеша."))
+            print(f"{Fore.RED}{Style.BRIGHT}✘ Ошибка: Пожалуйста, укажите пароль для генерации хеша.{Style.RESET_ALL}")
             return
 
         password = args[0]
         hash_value = None
+        tools = [("htpasswd", ["htpasswd", "-bnBC", "10", "", password]),
+                 ("php", ["php", "-r", f"echo password_hash('{password}', PASSWORD_DEFAULT);"]),
+                 ("openssl", ["openssl", "passwd", "-6", password])]
 
-        try:
-            if subprocess.run(["which", "htpasswd"], capture_output=True).returncode == 0:
-                result = subprocess.run(["htpasswd", "-bnBC", "10", "", password], capture_output=True, text=True)
-                hash_value = result.stdout.strip().split(":")[1]
-            elif subprocess.run(["which", "php"], capture_output=True).returncode == 0:
-                result = subprocess.run(["php", "-r", f"echo password_hash('{password}', PASSWORD_DEFAULT);"], capture_output=True, text=True)
-                hash_value = result.stdout.strip()
-            elif subprocess.run(["which", "openssl"], capture_output=True).returncode == 0:
-                result = subprocess.run(["openssl", "passwd", "-6", password], capture_output=True, text=True)
-                hash_value = result.stdout.strip()
-            else:
-                print(print_colored("bright_red", "Ошибка: Команды htpasswd, PHP и OpenSSL не найдены. Установите одну из них для генерации хеша."))
-                return
+        for tool, command in tools:
+            if subprocess.run(["which", tool], capture_output=True).returncode == 0:
+                try:
+                    result = subprocess.run(command, capture_output=True, text=True, check=True)
+                    hash_value = result.stdout.strip().split(":")[1] if tool == "htpasswd" else result.stdout.strip()
+                    break
+                except subprocess.CalledProcessError:
+                    continue
 
-            print(print_colored("bright_green", f"Сгенерированный хеш: {hash_value}"))
-        except subprocess.CalledProcessError as e:
-            print(print_colored("bright_red", f"Ошибка при генерации хеша: {str(e)}"))
-
-class RemoveImageCommand(Command):
-    def __init__(self):
-        super().__init__(["-ri", "remove-image"], "Удаляет image по указанному тегу")
-
-    def execute(self, *args):
-        if not args:
-            print(print_colored("bright_red", "Ошибка: Пожалуйста, укажите тег версии для удаления."))
-            return
-
-        version = args[0]
-
-        if version == "<none>":
-            cleanup_docker_images()
-            return
-
-        images_to_remove = []
-
-        try:
-            result = subprocess.run(
-                ["docker", "images", "--format", "{{.Repository}}\t{{.Tag}}\t{{.ID}}"],
-                capture_output=True, text=True, check=True
-            )
-            images = result.stdout.strip().splitlines()
-
-            for image in images:
-                repository, tag, image_id = image.split('\t')
-                if tag == version:
-                    images_to_remove.append(image_id)
-
-            if not images_to_remove:
-                print(print_colored("bright_yellow", f"Образы с тегом '{version}' не найдены."))
-                return
-
-            for image_id in images_to_remove:
-                subprocess.run(["docker", "rmi", image_id], check=True)
-                print(print_colored("bright_green", f"Удален образ с ID: {image_id}"))
-
-        except subprocess.CalledProcessError as e:
-            print(print_colored("bright_red", f"Ошибка при удалении образов Docker: {str(e)}"))
-
-def cleanup_docker_images():
-    try:
-        result = subprocess.run(["docker", "images", "-f", "dangling=true", "-q"], capture_output=True, text=True)
-        image_ids = result.stdout.strip().splitlines()
-
-        if image_ids:
-            subprocess.run(["docker", "rmi"] + image_ids, check=True)
-            print(print_colored("bright_green", "Все images <none> успешно очищены!"))
+        if hash_value:
+            print(f"{Fore.GREEN}{Style.BRIGHT}Сгенерированный хеш:{Style.RESET_ALL} {Fore.CYAN}{hash_value}{Style.RESET_ALL}")
         else:
-            print(print_colored("bright_green", "Нет images <none> для очистки."))
-
-    except subprocess.CalledProcessError as e:
-        print(print_colored("bright_red", f"Ошибка при очистке images <none>: {str(e)}"))
+            print(f"{Fore.RED}{Style.BRIGHT}✘ Ошибка: Команды htpasswd, PHP и OpenSSL не найдены. Установите одну из них для генерации хеша.{Style.RESET_ALL}")
 
 class UpdateScriptCommand(Command):
     def __init__(self):
@@ -121,37 +67,52 @@ class UpdateScriptCommand(Command):
         repo_dir = os.path.join(home_dir, "qq")
 
         if not os.path.exists(os.path.join(repo_dir, ".git")):
-            print_colored("bright_red", "Ошибка: Папка $HOME/qq не настроена как Git репозиторий.")
+            print(f"{Fore.RED}{Style.BRIGHT}✘ Ошибка: Папка $HOME/qq не настроена как Git репозиторий.{Style.RESET_ALL}")
             sys.exit(1)
 
         try:
             os.chdir(repo_dir)
 
-            print_colored("bright_yellow", "Откат к чистой версии ветки master...")
+            print(f"{Fore.YELLOW}{Style.BRIGHT}⚙ Откат к чистой версии ветки master...{Style.RESET_ALL}")
             subprocess.run(["git", "checkout", "master"], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             subprocess.run(["git", "reset", "--hard", "origin/master"], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-            print_colored("bright_yellow", "Получение последних изменений из удаленного репозитория...")
+            print(f"{Fore.YELLOW}{Style.BRIGHT}🔄 Получение последних изменений из удаленного репозитория...{Style.RESET_ALL}")
             subprocess.run(["git", "pull", "origin", "master"], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-            print_colored("bright_green", "Скрипт успешно обновлен до последней версии в ветке master!")
-        except subprocess.CalledProcessError as e:
-            print_colored("bright_red", f"Ошибка обновления скрипта: {str(e)}")
+            print(f"{Fore.GREEN}{Style.BRIGHT}✔ Скрипт успешно обновлен до последней версии в ветке master!{Style.RESET_ALL}")
+        except subprocess.CalledProcessError:
+            print(f"{Fore.RED}{Style.BRIGHT}✘ Ошибка обновления скрипта.{Style.RESET_ALL}")
             sys.exit(1)
 
-class TrayCommand(Command):
+class GetExternalIpCommand(Command):
     def __init__(self):
-        super().__init__(["tray"], "Запускает приложение в трее")
+        super().__init__(["-eip", "external-ip"], "Выводит IP для внешнего доступа")
 
     def execute(self, *args):
-        start_tray_app()
+        try:
+            result = subprocess.run(["ifconfig"], capture_output=True, text=True)
+            ip_lines = result.stdout.split('\n')
+            external_ip = None
+
+            for line in ip_lines:
+                if 'inet ' in line and not line.strip().startswith('127.'):
+                    external_ip = line.split()[1]
+                    break
+
+            if external_ip:
+                 print(f"{Fore.GREEN}{Style.BRIGHT}🌍 IP для внешнего доступа:{Style.RESET_ALL} {Fore.CYAN}{external_ip}{Style.RESET_ALL}")
+            else:
+                print(f"{Fore.RED}{Style.BRIGHT}❌ Не удалось определить внешний IP-адрес.{Style.RESET_ALL}")
+
+        except Exception as e:
+            print(f"{Fore.RED}{Style.BRIGHT}⚠️ Ошибка при получении внешнего IP-адреса: {str(e)}{Style.RESET_ALL}")
 
 class SystemCommand:
     @staticmethod
     def register(registry):
+        registry.register_command(GeneratePasswordHashCommand(), "system")
+        registry.register_command(GetExternalIpCommand(), "system")
         registry.register_command(GitIgnoreFileModeCommand(), "system")
         registry.register_command(ChmodAllCommand(), "system")
-        registry.register_command(GeneratePasswordHashCommand(), "system")
-        registry.register_command(RemoveImageCommand(), "system")
         registry.register_command(UpdateScriptCommand(), "system")
-        registry.register_command(TrayCommand(), "system")
