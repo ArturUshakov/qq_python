@@ -19,15 +19,17 @@ class CommandRegistry:
             "base": "Базовые команды",
             "container": "Команды контейнеров",
             "system": "Системные команды",
+            "cleanup": "Очистка",
             "info": "Информационные команды",
-            "cleanup": "Очистка"
+            "git": "GIT",
         }
         self.command_groups = {
             "base": {},
             "container": {},
             "system": {},
+            "cleanup": {},
             "info": {},
-            "cleanup": {}
+            "git": {},
         }
 
     def register_command(self, command, group="base"):
@@ -47,12 +49,14 @@ class CommandRegistry:
         from .system_commands import SystemCommand
         from .info_commands import InfoCommand
         from .cleanup_commands import CleanupCommand
+        from .git import GitCommand
 
         BaseCommand.register(self)
         ContainerCommand.register(self)
         SystemCommand.register(self)
         InfoCommand.register(self)
         CleanupCommand.register(self)
+        GitCommand.register(self)
 
     def print_help(self):
         help_command = self.get_command("-h")
