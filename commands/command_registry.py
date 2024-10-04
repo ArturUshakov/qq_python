@@ -1,3 +1,4 @@
+# commands/command_registry.py
 class Command:
     def __init__(self, names, description):
         if isinstance(names, str):

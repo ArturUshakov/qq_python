@@ -1,3 +1,4 @@
+# commands/container_commands.py
 import subprocess
 from colorama import Fore, Style, init
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -133,7 +134,14 @@ class ListContainersCommand(Command):
         containers = result.stdout.strip().splitlines()
 
         for container in containers:
-            name, status, project = container.split("\t")
+            parts = container.split("\t")
+
+            if len(parts) == 3:
+                name, status, project = parts
+            else:
+                name, status = parts
+                project = "N/A"
+
             if project in compose_projects:
                 compose_projects[project].append((name, status))
             else:

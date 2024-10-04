@@ -1,3 +1,4 @@
+# main.py
 import sys
 from colorama import Fore, Style, init
 
