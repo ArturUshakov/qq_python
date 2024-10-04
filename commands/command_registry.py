@@ -16,12 +16,11 @@ class CommandRegistry:
     def __init__(self):
         self.commands = {}
         self.groups = {
-            "base": "Базовые команды",
             "container": "Команды контейнеров",
             "system": "Системные команды",
             "cleanup": "Очистка",
-            "info": "Информационные команды",
             "git": "GIT",
+            "info": "Информационные команды"
         }
         self.command_groups = {
             "base": {},

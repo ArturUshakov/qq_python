@@ -16,45 +16,22 @@ class GitUndoLastCommitCommand(Command):
         except subprocess.CalledProcessError as e:
             print(f"{Fore.RED}Ошибка при отмене последнего коммита: {str(e)}{Style.RESET_ALL}")
 
-class GitDiffCommand(Command):
+class GitPruneMergedBranchesCommand(Command):
     def __init__(self):
-        super().__init__(["-gd", "git-diff"], "Показывает изменения, которые будут закоммичены")
+        super().__init__(["-pmb", "git-prune-merged"], "Удаляет локальные ветки, которые уже слиты с master/main")
 
     def execute(self, *args):
         try:
-            # Выполняем команду git diff --staged
-            result = subprocess.run(["git", "diff", "--staged"], capture_output=True, text=True, check=True)
-
-            if not result.stdout.strip():
-                print(f"{Fore.GREEN}Нет изменений для отображения.{Style.RESET_ALL}")
-                return
-
-            print(f"{Fore.YELLOW}Изменения перед коммитом:{Style.RESET_ALL}\n")
-
-            # Разбираем вывод и применяем цветовое форматирование
-            for line in result.stdout.splitlines():
-                if line.startswith("diff --git"):
-                    print(f"{Fore.CYAN}{line}{Style.RESET_ALL}")
-                elif line.startswith("index"):
-                    print(f"{Fore.MAGENTA}{line}{Style.RESET_ALL}")
-                elif line.startswith("---"):
-                    print(f"{Fore.RED}{line}{Style.RESET_ALL}")
-                elif line.startswith("+++"):
-                    print(f"{Fore.GREEN}{line}{Style.RESET_ALL}")
-                elif line.startswith("@@"):
-                    print(f"{Fore.BLUE}{line}{Style.RESET_ALL}")
-                elif line.startswith("+"):
-                    print(f"{Fore.GREEN}{line}{Style.RESET_ALL}")  # Добавленные строки
-                elif line.startswith("-"):
-                    print(f"{Fore.RED}{line}{Style.RESET_ALL}")  # Удалённые строки
-                else:
-                    print(line)
-
+            print(f"{Fore.YELLOW}Удаление локальных веток, которые были слиты с master/main...{Style.RESET_ALL}")
+            subprocess.run(["git", "checkout", "master"], check=True)
+            subprocess.run(["git", "fetch", "--prune"], check=True)
+            subprocess.run(["git", "branch", "--merged", "master", "|", "grep", "-v", "'\\*'", "|", "xargs", "git", "branch", "-d"], shell=True, check=True)
+            print(f"{Fore.GREEN}Локальные слитые ветки успешно удалены!{Style.RESET_ALL}")
         except subprocess.CalledProcessError as e:
-            print(f"{Fore.RED}Ошибка при выводе изменений: {str(e)}{Style.RESET_ALL}")
+            print(f"{Fore.RED}Ошибка при удалении слитых веток: {str(e)}{Style.RESET_ALL}")
 
 class GitCommand:
     @staticmethod
     def register(registry):
         registry.register_command(GitUndoLastCommitCommand(), "git")
-        registry.register_command(GitDiffCommand(), "git")
+        registry.register_command(GitPruneMergedBranchesCommand(), "git")
