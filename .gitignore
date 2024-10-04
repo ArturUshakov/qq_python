@@ -2,3 +2,4 @@ venv/
 qq_app.log
 dist
 build
+.idea/
