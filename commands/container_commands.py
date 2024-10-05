@@ -12,62 +12,32 @@ init(autoreset=True)
 
 class StopAllContainersCommand(Command):
     def __init__(self):
-        super().__init__(["-d", "down"], "Останавливает все запущенные контейнеры или контейнеры по фильтру имени")
-
-    async def stop_container(self, container_id, container_name):
-        try:
-            process = await asyncio.create_subprocess_exec(
-                "docker", "kill", container_id,
-                stdout=asyncio.subprocess.DEVNULL,
-                stderr=asyncio.subprocess.PIPE
-            )
-            _, stderr = await process.communicate()
-            if process.returncode == 0:
-                return container_name, True
-            return container_name, False, stderr.decode().strip()
-        except Exception as e:
-            return container_name, False, str(e)
+        super().__init__(["-d", "down"], "Останавливает все запущенные контейнеры по фильтру имени или проекта")
 
     async def stop_all_containers(self):
         start_time = time.time()
 
         process = await asyncio.create_subprocess_exec(
-            "docker", "ps", "--format", "{{.ID}}\t{{.Names}}",
-            stdout=asyncio.subprocess.PIPE
+            "docker", "ps", "-q", stdout=asyncio.subprocess.PIPE
         )
         stdout, _ = await process.communicate()
-        container_data = stdout.decode().strip().splitlines()
+        container_ids = stdout.decode().strip().splitlines()
 
-        if not container_data:
+        if not container_ids:
             print(Fore.RED + "🚫 Нет запущенных контейнеров для остановки.")
             return
 
         print(Fore.BLUE + "🔄 Остановка всех запущенных контейнеров:")
 
-        tasks = []
-        max_name_length = 0
-
-        for cid in container_data:
-            container_id, container_name = cid.split('\t')
-            tasks.append(self.stop_container(container_id, container_name))
-            max_name_length = max(max_name_length, len(container_name))
-
-        stopped_containers = []
-        failed_containers = []
-
-        for task in asyncio.as_completed(tasks):
-            container_name, success, *error = await task
-            if success:
-                stopped_containers.append(container_name)
-                print(f"{Fore.GREEN}{container_name.ljust(max_name_length)} {Fore.RED}остановлен")
-            else:
-                failed_containers.append((container_name, error[0]))
-                print(f"{Fore.RED}{container_name.ljust(max_name_length)}: {Fore.YELLOW}{error[0]}")
-
-        if failed_containers:
-            print(Fore.RED + "\n❗ Некоторые контейнеры не удалось остановить:")
-            for name, error in failed_containers:
-                print(f"{Fore.RED}{name.ljust(max_name_length)}: {Fore.YELLOW}{error}")
+        try:
+            await asyncio.create_subprocess_exec(
+                "docker", "kill", *container_ids,
+                stdout=asyncio.subprocess.DEVNULL,
+                stderr=asyncio.subprocess.PIPE
+            )
+            print(Fore.GREEN + f"✔ Все контейнеры остановлены.")
+        except Exception as e:
+            print(Fore.RED + f"✘ Ошибка при остановке контейнеров: {str(e)}")
 
         total_time = time.time() - start_time
         print(f"\n⏱ Время выполнения: {total_time:.2f} секунд")
@@ -76,42 +46,37 @@ class StopAllContainersCommand(Command):
         start_time = time.time()
 
         process = await asyncio.create_subprocess_exec(
-            "docker", "ps", "--filter", f"name={filter_option}", "--format", "{{.ID}}\t{{.Names}}",
+            "docker", "ps", "--filter", f"label=com.docker.compose.project={filter_option}", "-q",
             stdout=asyncio.subprocess.PIPE
         )
         stdout, _ = await process.communicate()
-        container_data = stdout.decode().strip().splitlines()
+        container_ids = stdout.decode().strip().splitlines()
 
-        if not container_data:
-            print(Fore.RED + f"🚫 Контейнеры, соответствующие фильтру '{filter_option}', не найдены.")
-            return
+        if not container_ids:
+            print(Fore.YELLOW + f"⚠ Проект, содержащий '{filter_option}', не найден. Пытаемся найти контейнеры по названию...")
 
-        print(Fore.BLUE + f"🔍 Остановка контейнеров, соответствующих фильтру {Fore.YELLOW}{filter_option}{Fore.BLUE}:")
+            process = await asyncio.create_subprocess_exec(
+                "docker", "ps", "--filter", f"name={filter_option}", "-q",
+                stdout=asyncio.subprocess.PIPE
+            )
+            stdout, _ = await process.communicate()
+            container_ids = stdout.decode().strip().splitlines()
 
-        tasks = []
-        max_name_length = 0
+            if not container_ids:
+                print(Fore.RED + f"🚫 Контейнеры, содержащие '{filter_option}' в названии, не найдены.")
+                return
 
-        for cid in container_data:
-            container_id, container_name = cid.split('\t')
-            tasks.append(self.stop_container(container_id, container_name))
-            max_name_length = max(max_name_length, len(container_name))
+        print(Fore.BLUE + f"🔍 Остановка контейнеров с частью имени/проекта {Fore.YELLOW}{filter_option}{Fore.BLUE}:")
 
-        stopped_containers = []
-        failed_containers = []
-
-        for task in asyncio.as_completed(tasks):
-            container_name, success, *error = await task
-            if success:
-                stopped_containers.append(container_name)
-                print(f"{Fore.GREEN}{container_name.ljust(max_name_length)} {Fore.RED}остановлен")
-            else:
-                failed_containers.append((container_name, error[0]))
-                print(f"{Fore.RED}{container_name.ljust(max_name_length)}: {Fore.YELLOW}{error[0]}")
-
-        if failed_containers:
-            print(Fore.RED + "\n❗ Некоторые контейнеры не удалось остановить:")
-            for name, error in failed_containers:
-                print(f"{Fore.RED}{name.ljust(max_name_length)}: {Fore.YELLOW}{error}")
+        try:
+            await asyncio.create_subprocess_exec(
+                "docker", "kill", *container_ids,
+                stdout=asyncio.subprocess.DEVNULL,
+                stderr=asyncio.subprocess.PIPE
+            )
+            print(Fore.GREEN + f"✔ Все контейнеры остановлены.")
+        except Exception as e:
+            print(Fore.RED + f"✘ Ошибка при остановке контейнеров: {str(e)}")
 
         total_time = time.time() - start_time
         print(f"\n⏱ Время выполнения: {total_time:.2f} секунд")
