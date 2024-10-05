@@ -6,7 +6,7 @@ _qq_completions() {
     cur="${COMP_WORDS[COMP_CWORD]}"
     prev="${COMP_WORDS[COMP_CWORD - 1]}"
 
-    commands="-h -i -d -l -la -li -eip -ri -ch -gph -gi -dni -pb info down list list-all list-images external-ip remove-image chmod-all generate-password-hash upgrade update -c clear -clc clear-last-commit -pmb git-prune-merged"
+    commands="-d -l -e -la -li -ri -gph -eip -ch -dni -pb -clr -clc -gi -i down list exec list-all list-images remove-image generate-password-hash external-ip update upgrade cleanup-docker-images prune-builder clear clear-last-commit info"
 
     COMPREPLY=($(compgen -W "${commands}" -- "${cur}"))
 }

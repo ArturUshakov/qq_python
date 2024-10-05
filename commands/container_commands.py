@@ -2,6 +2,7 @@
 import subprocess
 import asyncio
 import time
+import difflib
 from colorama import Fore, Style, init
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from queue import Queue
@@ -217,12 +218,86 @@ def cleanup_docker_images():
     except subprocess.CalledProcessError:
         print(f"{Fore.RED}{Style.BRIGHT}✘ Ошибка при очистке images <none>.{Style.RESET_ALL}")
 
+class ExecInContainerCommand(Command):
+    def __init__(self):
+        super().__init__(["-e", "exec"], "Выполняет команду внутри контейнера (например fpm ls)")
+
+    def get_containers(self):
+        try:
+            result = subprocess.run(
+                ["docker", "ps", "--format", "{{.Names}}"],
+                capture_output=True,
+                text=True,
+                check=True
+            )
+            return result.stdout.strip().splitlines()
+        except subprocess.CalledProcessError as e:
+            print(Fore.RED + f"✘ Ошибка при получении списка контейнеров: {str(e)}")
+            return []
+
+    def find_container(self, partial_name):
+        containers = self.get_containers()
+        partial_name_lower = partial_name.lower()
+
+        matching_containers = [name for name in containers if partial_name_lower in name.lower()]
+
+        if not matching_containers:
+            print(Fore.RED + f"✘ Контейнер с частью имени '{partial_name}' не найден.")
+            return None
+
+        if len(matching_containers) > 1:
+            print(Fore.YELLOW + "⚠ Найдено несколько контейнеров с похожими именами:")
+            for idx, container in enumerate(matching_containers, 1):
+                print(f"  {idx}. {container}")
+            try:
+                choice = int(input("Введите номер контейнера для подключения: "))
+                if 1 <= choice <= len(matching_containers):
+                    return matching_containers[choice - 1]
+                else:
+                    print(Fore.RED + "✘ Неверный выбор.")
+                    return None
+            except ValueError:
+                print(Fore.RED + "✘ Некорректный ввод, необходимо ввести число.")
+                return None
+
+        return matching_containers[0]
+
+    def exec_command(self, container_name, command):
+        if command[0] == "bash":
+            try:
+                print(Fore.YELLOW + "⚠ Проверка наличия 'bash'.")
+                subprocess.run(["docker", "exec", container_name, "which", "bash"], check=True)
+            except subprocess.CalledProcessError:
+                print(Fore.YELLOW + "⚠ 'bash' не найден, пробую использовать 'sh' вместо этого.")
+                command = ["sh"]
+
+        try:
+            print(Fore.GREEN + f"✔ Вход в контейнер: {container_name}")
+            subprocess.run(["docker", "exec", "-it", container_name] + command, check=True)
+        except subprocess.CalledProcessError as e:
+            print(Fore.RED + f"✘ Ошибка при выполнении команды в контейнере: {str(e)}")
+
+    def execute(self, *args):
+        if len(args) < 1:
+            print(Fore.RED + "✘ Укажите часть имени контейнера.")
+            return
+
+        partial_name = args[0]
+        command = list(args[1:])
+
+        if not command:
+            command = ["sh"]
+
+        container_name = self.find_container(partial_name)
+        if container_name:
+            self.exec_command(container_name, command)
 
 class ContainerCommand:
     @staticmethod
     def register(registry):
         registry.register_command(StopAllContainersCommand(), "container")
         registry.register_command(ListRunningContainersCommand(), "container")
+        registry.register_command(ExecInContainerCommand(), "container")
         registry.register_command(ListAllContainersCommand(), "container")
         registry.register_command(ListImagesCommand(), "container")
         registry.register_command(RemoveImageCommand(), "container")
