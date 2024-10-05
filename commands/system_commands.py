@@ -86,8 +86,6 @@ class UpdateScriptCommand(Command):
             os.chdir(repo_dir)
 
             print(f"{Fore.YELLOW}{Style.BRIGHT}⚙ Откат к чистой версии ветки master...{Style.RESET_ALL}")
-            subprocess.run(["git", "checkout", "master"], check=True, stdout=subprocess.DEVNULL,
-                           stderr=subprocess.DEVNULL)
             subprocess.run(["git", "reset", "--hard", "origin/master"], check=True, stdout=subprocess.DEVNULL,
                            stderr=subprocess.DEVNULL)
 
