@@ -1,6 +1,6 @@
 # docker build -t nuitka_project .
 # docker run --rm -v /home/artur/qq_test:/app/output -it nuitka_project /bin/bash
-# python3.8 -m nuitka --onefile --follow-imports --output-dir=output main.py
+# python3.8 -m nuitka --onefile --follow-imports --output-dir=output --output=qq main.py
 
 FROM ubuntu:20.04
 

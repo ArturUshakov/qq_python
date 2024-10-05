@@ -11,4 +11,4 @@ _qq_completions() {
     COMPREPLY=($(compgen -W "${commands}" -- "${cur}"))
 }
 
-complete -F _qq_completions "python3 $HOME/qq/qq.bin"
+complete -F _qq_completions "python3 $HOME/qq/qq"
