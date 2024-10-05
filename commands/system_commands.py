@@ -7,6 +7,7 @@ from colorama import Fore, Style, init
 
 init(autoreset=True)
 
+
 class GitIgnoreFileModeCommand(Command):
     def __init__(self):
         super().__init__("-gi", "Отключает отслеживание изменений прав файлов в Git")
@@ -14,9 +15,12 @@ class GitIgnoreFileModeCommand(Command):
     def execute(self, *args):
         try:
             subprocess.run(["git", "config", "core.fileMode", "false"], check=True)
-            print(f"{Fore.GREEN}{Style.BRIGHT}✔ Отслеживание изменений прав файлов в Git успешно отключено.{Style.RESET_ALL}")
+            print(
+                f"{Fore.GREEN}{Style.BRIGHT}✔ Отслеживание изменений прав файлов в Git успешно отключено.{Style.RESET_ALL}")
         except subprocess.CalledProcessError:
-            print(f"{Fore.RED}{Style.BRIGHT}✘ Ошибка: Не удалось отключить отслеживание изменений прав файлов в Git.{Style.RESET_ALL}")
+            print(
+                f"{Fore.RED}{Style.BRIGHT}✘ Ошибка: Не удалось отключить отслеживание изменений прав файлов в Git.{Style.RESET_ALL}")
+
 
 class ChmodAllCommand(Command):
     def __init__(self):
@@ -24,11 +28,14 @@ class ChmodAllCommand(Command):
 
     def execute(self, *args):
         try:
-            print(f"{Fore.YELLOW}{Style.BRIGHT}⚙ Изменение прав доступа для всех файлов и директорий в текущей папке...{Style.RESET_ALL}")
+            print(
+                f"{Fore.YELLOW}{Style.BRIGHT}⚙ Изменение прав доступа для всех файлов и директорий в текущей папке...{Style.RESET_ALL}")
             subprocess.run(["sudo", "chmod", "777", "-R", "."], check=True)
-            print(f"{Fore.GREEN}{Style.BRIGHT}✔ Все файлы и директории в текущей папке успешно получили права 777.{Style.RESET_ALL}")
+            print(
+                f"{Fore.GREEN}{Style.BRIGHT}✔ Все файлы и директории в текущей папке успешно получили права 777.{Style.RESET_ALL}")
         except subprocess.CalledProcessError:
             print(f"{Fore.RED}{Style.BRIGHT}✘ Ошибка при изменении прав доступа.{Style.RESET_ALL}")
+
 
 class GeneratePasswordHashCommand(Command):
     def __init__(self):
@@ -55,9 +62,12 @@ class GeneratePasswordHashCommand(Command):
                     continue
 
         if hash_value:
-            print(f"{Fore.GREEN}{Style.BRIGHT}Сгенерированный хеш:{Style.RESET_ALL} {Fore.CYAN}{hash_value}{Style.RESET_ALL}")
+            print(
+                f"{Fore.GREEN}{Style.BRIGHT}Сгенерированный хеш:{Style.RESET_ALL} {Fore.CYAN}{hash_value}{Style.RESET_ALL}")
         else:
-            print(f"{Fore.RED}{Style.BRIGHT}✘ Ошибка: Команды htpasswd, PHP и OpenSSL не найдены. Установите одну из них для генерации хеша.{Style.RESET_ALL}")
+            print(
+                f"{Fore.RED}{Style.BRIGHT}✘ Ошибка: Команды htpasswd, PHP и OpenSSL не найдены. Установите одну из них для генерации хеша.{Style.RESET_ALL}")
+
 
 class UpdateScriptCommand(Command):
     def __init__(self):
@@ -68,23 +78,30 @@ class UpdateScriptCommand(Command):
         repo_dir = os.path.join(home_dir, "qq")
 
         if not os.path.exists(os.path.join(repo_dir, ".git")):
-            print(f"{Fore.RED}{Style.BRIGHT}✘ Ошибка: Папка $HOME/qq не настроена как Git репозиторий.{Style.RESET_ALL}")
+            print(
+                f"{Fore.RED}{Style.BRIGHT}✘ Ошибка: Папка $HOME/qq не настроена как Git репозиторий.{Style.RESET_ALL}")
             sys.exit(1)
 
         try:
             os.chdir(repo_dir)
 
             print(f"{Fore.YELLOW}{Style.BRIGHT}⚙ Откат к чистой версии ветки master...{Style.RESET_ALL}")
-            subprocess.run(["git", "checkout", "master"], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            subprocess.run(["git", "reset", "--hard", "origin/master"], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            subprocess.run(["git", "checkout", "master"], check=True, stdout=subprocess.DEVNULL,
+                           stderr=subprocess.DEVNULL)
+            subprocess.run(["git", "reset", "--hard", "origin/master"], check=True, stdout=subprocess.DEVNULL,
+                           stderr=subprocess.DEVNULL)
 
-            print(f"{Fore.YELLOW}{Style.BRIGHT}🔄 Получение последних изменений из удаленного репозитория...{Style.RESET_ALL}")
-            subprocess.run(["git", "pull", "origin", "master"], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            print(
+                f"{Fore.YELLOW}{Style.BRIGHT}🔄 Получение последних изменений из удаленного репозитория...{Style.RESET_ALL}")
+            subprocess.run(["git", "pull", "origin", "master"], check=True, stdout=subprocess.DEVNULL,
+                           stderr=subprocess.DEVNULL)
 
-            print(f"{Fore.GREEN}{Style.BRIGHT}✔ Скрипт успешно обновлен до последней версии в ветке master!{Style.RESET_ALL}")
+            print(
+                f"{Fore.GREEN}{Style.BRIGHT}✔ Скрипт успешно обновлен до последней версии в ветке master!{Style.RESET_ALL}")
         except subprocess.CalledProcessError:
             print(f"{Fore.RED}{Style.BRIGHT}✘ Ошибка обновления скрипта.{Style.RESET_ALL}")
             sys.exit(1)
+
 
 class GetExternalIpCommand(Command):
     def __init__(self):
@@ -102,12 +119,14 @@ class GetExternalIpCommand(Command):
                     break
 
             if external_ip:
-                 print(f"{Fore.GREEN}{Style.BRIGHT}🌍 IP для внешнего доступа:{Style.RESET_ALL} {Fore.CYAN}{external_ip}{Style.RESET_ALL}")
+                print(
+                    f"{Fore.GREEN}{Style.BRIGHT}🌍 IP для внешнего доступа:{Style.RESET_ALL} {Fore.CYAN}{external_ip}{Style.RESET_ALL}")
             else:
                 print(f"{Fore.RED}{Style.BRIGHT}❌ Не удалось определить внешний IP-адрес.{Style.RESET_ALL}")
 
         except Exception as e:
             print(f"{Fore.RED}{Style.BRIGHT}⚠️ Ошибка при получении внешнего IP-адреса: {str(e)}{Style.RESET_ALL}")
+
 
 class SystemCommand:
     @staticmethod

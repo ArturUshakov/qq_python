@@ -4,6 +4,7 @@ from colorama import Fore, Style, init
 
 init(autoreset=True)
 
+
 def suggest_command(command_registry, command_input):
     import difflib
 
@@ -16,6 +17,7 @@ def suggest_command(command_registry, command_input):
             print(f"{Fore.LIGHTCYAN_EX}  • {cmd}{Style.RESET_ALL}")
     else:
         print(f"{Fore.LIGHTYELLOW_EX}✘ Нет похожих команд.{Style.RESET_ALL}")
+
 
 def main():
     from commands import CommandRegistry
@@ -38,8 +40,10 @@ def main():
 
     print(f"{Fore.LIGHTRED_EX}Неизвестная команда: {command_input}{Style.RESET_ALL}")
     suggest_command(command_registry, command_input)
-    print(f"{Fore.LIGHTYELLOW_EX}ℹ️ Используйте '-h' или 'help' для получения списка доступных команд.{Style.RESET_ALL}")
+    print(
+        f"{Fore.LIGHTYELLOW_EX}ℹ️ Используйте '-h' или 'help' для получения списка доступных команд.{Style.RESET_ALL}")
     sys.exit(1)
+
 
 if __name__ == "__main__":
     try:

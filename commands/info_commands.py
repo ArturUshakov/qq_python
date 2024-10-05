@@ -6,6 +6,7 @@ from utils import get_version
 
 init(autoreset=True)
 
+
 class ScriptInfoCommand(Command):
     def __init__(self):
         super().__init__(["-i", "info"], "Информация о скрипте")
@@ -25,6 +26,7 @@ class ScriptInfoCommand(Command):
         print(Fore.RED + "\n🛠️ Последние изменения:" + Style.RESET_ALL)
         TagInfo().get_latest_tag_info()
         print(Fore.LIGHTBLUE_EX + border_char * width + "\n" + Style.RESET_ALL)
+
 
 class TagInfo:
     def get_latest_tag_info(self):
@@ -83,6 +85,7 @@ class TagInfo:
                 print(line)
         else:
             print(Fore.RED + "🚫 Нет информации о последних изменениях." + Style.RESET_ALL)
+
 
 class InfoCommand:
     @staticmethod

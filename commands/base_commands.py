@@ -5,6 +5,7 @@ from .command_registry import Command
 
 init(autoreset=True)
 
+
 class PrintHelpCommand(Command):
     def __init__(self):
         super().__init__(["-h", "help"], "Выводит это сообщение")
@@ -26,7 +27,8 @@ class PrintHelpCommand(Command):
         def print_command_list():
             command_registry = self.registry
             max_name_length = max(
-                len(', '.join(command.names)) for group in command_registry.groups for command in command_registry.get_group_commands(group).values()
+                len(', '.join(command.names)) for group in command_registry.groups for command in
+                command_registry.get_group_commands(group).values()
             ) + 4
 
             for group, description in command_registry.groups.items():
@@ -34,10 +36,12 @@ class PrintHelpCommand(Command):
                 for command in command_registry.get_group_commands(group).values():
                     names = ', '.join(command.names)
                     formatted_names = f'  {names:<{max_name_length}}'
-                    print(f"{Fore.GREEN}{formatted_names}{Style.RESET_ALL} {Fore.WHITE}{command.description}{Style.RESET_ALL}")
+                    print(
+                        f"{Fore.GREEN}{formatted_names}{Style.RESET_ALL} {Fore.WHITE}{command.description}{Style.RESET_ALL}")
 
         print_header_footer()
         print_command_list()
+
 
 class BaseCommand:
     @staticmethod

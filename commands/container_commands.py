@@ -8,13 +8,15 @@ from .command_registry import Command
 
 init(autoreset=True)
 
+
 class StopAllContainersCommand(Command):
     def __init__(self):
         super().__init__(["-d", "down"], "Останавливает все запущенные контейнеры или контейнеры по фильтру имени")
 
     def stop_container(self, container_id, container_name):
         try:
-            process = subprocess.Popen(["docker", "stop", container_id], stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+            process = subprocess.Popen(["docker", "stop", container_id], stdout=subprocess.DEVNULL,
+                                       stderr=subprocess.PIPE)
             _, stderr = process.communicate()
             if process.returncode == 0:
                 return container_name, True
@@ -52,7 +54,8 @@ class StopAllContainersCommand(Command):
 
         with ThreadPoolExecutor(max_workers=20) as executor:
             futures = {executor.submit(self.stop_container, container_id, container_name): container_name
-                       for container_id, container_name in [container_queue.get() for _ in range(container_queue.qsize())]}
+                       for container_id, container_name in
+                       [container_queue.get() for _ in range(container_queue.qsize())]}
 
             with tqdm(total=len(futures), desc="Остановка контейнеров", unit="container", ncols=100) as pbar:
                 for future in as_completed(futures):
@@ -74,7 +77,9 @@ class StopAllContainersCommand(Command):
                 print(f"{Fore.RED}{name.ljust(max_name_length)}: {Fore.YELLOW}{error}")
 
     def stop_filtered_containers(self, filter_option):
-        result = subprocess.run(["docker", "ps", "--filter", f"name={filter_option}", "--format", "{{.ID}}\t{{.Names}}"], capture_output=True, text=True)
+        result = subprocess.run(
+            ["docker", "ps", "--filter", f"name={filter_option}", "--format", "{{.ID}}\t{{.Names}}"],
+            capture_output=True, text=True)
         container_data = result.stdout.strip().splitlines()
 
         if not container_data:
@@ -96,7 +101,8 @@ class StopAllContainersCommand(Command):
 
         with ThreadPoolExecutor(max_workers=20) as executor:
             futures = {executor.submit(self.stop_container, container_id, container_name): container_name
-                       for container_id, container_name in [container_queue.get() for _ in range(container_queue.qsize())]}
+                       for container_id, container_name in
+                       [container_queue.get() for _ in range(container_queue.qsize())]}
 
             with tqdm(total=len(futures), desc="Остановка контейнеров", unit="container", ncols=100) as pbar:
                 for future in as_completed(futures):
@@ -116,6 +122,7 @@ class StopAllContainersCommand(Command):
             print(Fore.RED + "\n❗ Некоторые контейнеры не удалось остановить:")
             for name, error in failed_containers:
                 print(f"{Fore.RED}{name.ljust(max_name_length)}: {Fore.YELLOW}{error}")
+
 
 class ListContainersCommand(Command):
     def __init__(self, names, filter_option, title, format_option):
@@ -156,13 +163,18 @@ class ListContainersCommand(Command):
     def execute(self, *args):
         self.list_containers()
 
+
 class ListRunningContainersCommand(ListContainersCommand):
     def __init__(self):
-        super().__init__(["-l", "list"], "", "Запущенные контейнеры", "{{.Names}}\t{{.Status}}\t{{.Label \"com.docker.compose.project\"}}")
+        super().__init__(["-l", "list"], "", "Запущенные контейнеры",
+                         "{{.Names}}\t{{.Status}}\t{{.Label \"com.docker.compose.project\"}}")
+
 
 class ListAllContainersCommand(ListContainersCommand):
     def __init__(self):
-        super().__init__(["-la", "list-all"], "-a", "Все контейнеры", "{{.Names}}\t{{.Status}}\t{{.Label \"com.docker.compose.project\"}}")
+        super().__init__(["-la", "list-all"], "-a", "Все контейнеры",
+                         "{{.Names}}\t{{.Status}}\t{{.Label \"com.docker.compose.project\"}}")
+
 
 class ListImagesCommand(Command):
     def __init__(self):
@@ -186,6 +198,7 @@ class ListImagesCommand(Command):
         except subprocess.CalledProcessError:
             print(Fore.RED + "❌ Ошибка при получении списка образов Docker.")
 
+
 class RemoveImageCommand(Command):
     def __init__(self):
         super().__init__(["-ri", "remove-image"], "Удаляет image по указанному тегу")
@@ -207,7 +220,8 @@ class RemoveImageCommand(Command):
                 capture_output=True, text=True, check=True
             )
             images = result.stdout.strip().splitlines()
-            images_to_remove = [image_id for repo, tag, image_id in (img.split('\t') for img in images) if tag == version]
+            images_to_remove = [image_id for repo, tag, image_id in (img.split('\t') for img in images) if
+                                tag == version]
 
             if not images_to_remove:
                 print(f"{Fore.YELLOW}{Style.BRIGHT}⚠ Образы с тегом '{version}' не найдены.{Style.RESET_ALL}")
@@ -219,6 +233,7 @@ class RemoveImageCommand(Command):
 
         except subprocess.CalledProcessError:
             print(f"{Fore.RED}{Style.BRIGHT}✘ Ошибка при удалении образов Docker.{Style.RESET_ALL}")
+
 
 def cleanup_docker_images():
     try:
@@ -233,6 +248,7 @@ def cleanup_docker_images():
 
     except subprocess.CalledProcessError:
         print(f"{Fore.RED}{Style.BRIGHT}✘ Ошибка при очистке images <none>.{Style.RESET_ALL}")
+
 
 class ContainerCommand:
     @staticmethod

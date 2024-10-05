@@ -4,6 +4,7 @@ from .command_registry import Command
 
 init(autoreset=True)
 
+
 class GitUndoLastCommitCommand(Command):
     def __init__(self):
         super().__init__(["-сlс", "clear-last-commit"], "Отменяет последний коммит, но оставляет изменения")
@@ -16,6 +17,7 @@ class GitUndoLastCommitCommand(Command):
         except subprocess.CalledProcessError as e:
             print(f"{Fore.RED}Ошибка при отмене последнего коммита: {str(e)}{Style.RESET_ALL}")
 
+
 class GitPruneMergedBranchesCommand(Command):
     def __init__(self):
         super().__init__(["-pmb", "git-prune-merged"], "Удаляет локальные ветки, которые уже слиты с master")
@@ -24,7 +26,8 @@ class GitPruneMergedBranchesCommand(Command):
         try:
             print(f"{Fore.YELLOW}Удаление локальных веток, которые были слиты с master...{Style.RESET_ALL}")
 
-            subprocess.run(["git", "checkout", "master"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
+            subprocess.run(["git", "checkout", "master"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                           check=True)
 
             merged_branches = subprocess.run(
                 "git branch --merged | grep -v '\\*' | grep -v 'master'",
@@ -52,6 +55,7 @@ class GitPruneMergedBranchesCommand(Command):
             print(f"{Fore.GREEN}Локальные слитые ветки успешно удалены!{Style.RESET_ALL}")
         except subprocess.CalledProcessError as e:
             print(f"{Fore.RED}Ошибка при удалении слитых веток: {str(e)}{Style.RESET_ALL}")
+
 
 class GitCommand:
     @staticmethod

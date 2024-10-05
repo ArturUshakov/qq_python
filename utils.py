@@ -44,9 +44,11 @@ COLORS = {
 CACHE_FILE = os.path.expanduser("~/qq/version_cache.json")
 CACHE_DURATION = 300  # 5 минут
 
+
 def print_colored(color, text):
     reset = "\033[0m"
     return f"{COLORS.get(color, '')}{text}{reset}"
+
 
 def get_version():
     changelog_file = os.path.expanduser("~/qq/CHANGELOG.md")
@@ -60,6 +62,7 @@ def get_version():
             return match.group(1)
     return "Не удалось определить версию."
 
+
 def get_cached_version():
     if os.path.isfile(CACHE_FILE):
         with open(CACHE_FILE, "r") as file:
@@ -68,9 +71,11 @@ def get_cached_version():
                 return cache_data["latest_version"]
     return None
 
+
 def set_cached_version(version):
     with open(CACHE_FILE, "w") as file:
         json.dump({"latest_version": version, "timestamp": time.time()}, file)
+
 
 def get_latest_version():
     cached_version = get_cached_version()
@@ -89,6 +94,7 @@ def get_latest_version():
     except (requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
         return f"Ошибка при получении последней версии: {str(e)}"
 
+
 def check_for_updates():
     installed_version = get_version()
     latest_version = get_latest_version()
@@ -103,13 +109,16 @@ def check_for_updates():
 
     if installed_version != latest_version:
         print(print_colored("bright_red", "\nВнимание!"))
-        print(print_colored("bright_yellow", f"Доступна новая версия qq: {latest_version}. Ваша версия: {installed_version}."))
+        print(print_colored("bright_yellow",
+                            f"Доступна новая версия qq: {latest_version}. Ваша версия: {installed_version}."))
         print(print_colored("bright_yellow", "Используйте 'qq update' для обновления до последней версии."))
+
 
 def process_tag_line(line):
     match = re.match(r'^## \[([0-9]+\.[0-9]+\.[0-9]+)\] - ([0-9]{4}-[0-9]{2}-[0-9]{2})$', line)
     if match:
-        print(f"{print_colored('bright_green', f'## [{match.group(1)}]')} - {print_colored('bright_yellow', match.group(2))}")
+        print(
+            f"{print_colored('bright_green', f'## [{match.group(1)}]')} - {print_colored('bright_yellow', match.group(2))}")
     elif line.startswith("- "):
         print(f"  {print_colored('bright_cyan', line)}")
     elif line.startswith("  - "):

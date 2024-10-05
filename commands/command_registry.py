@@ -12,6 +12,7 @@ class Command:
     def execute(self, *args):
         raise NotImplementedError("Subclasses should implement this method")
 
+
 class CommandRegistry:
     def __init__(self):
         self.commands = {}

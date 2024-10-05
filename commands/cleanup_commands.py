@@ -5,6 +5,7 @@ from .command_registry import Command
 
 init(autoreset=True)
 
+
 class CleanupDockerImagesCommand(Command):
     def __init__(self):
         super().__init__(["-dni", "cleanup-docker-images"], "Удаляет <none> images")
@@ -22,14 +23,15 @@ class CleanupDockerImagesCommand(Command):
                     print(f"{Fore.GREEN}Все <none> images успешно удалены!{Style.RESET_ALL}")
                 except subprocess.CalledProcessError as e:
                     print(f"{Fore.RED}Ошибка при удалении <none> images: {str(e)}{Style.RESET_ALL}")
-                    # Попытка принудительного удаления
-                    force_remove = input(f"{Fore.YELLOW}Хотите принудительно удалить эти images? (y/n): {Style.RESET_ALL}").lower()
+                    force_remove = input(
+                        f"{Fore.YELLOW}Хотите принудительно удалить эти images? (y/n): {Style.RESET_ALL}").lower()
                     if force_remove == 'y':
                         try:
                             subprocess.run(["docker", "rmi", "-f"] + image_ids, check=True)
                             print(f"{Fore.GREEN}Все <none> images успешно удалены принудительно!{Style.RESET_ALL}")
                         except subprocess.CalledProcessError as e:
-                            print(f"{Fore.RED}Ошибка при принудительном удалении <none> images: {str(e)}{Style.RESET_ALL}")
+                            print(
+                                f"{Fore.RED}Ошибка при принудительном удалении <none> images: {str(e)}{Style.RESET_ALL}")
                     else:
                         print(f"{Fore.YELLOW}Принудительное удаление отменено.{Style.RESET_ALL}")
             else:
@@ -37,6 +39,7 @@ class CleanupDockerImagesCommand(Command):
 
         except subprocess.CalledProcessError as e:
             print(f"{Fore.RED}Ошибка при поиске <none> images: {str(e)}{Style.RESET_ALL}")
+
 
 class PruneBuilderCommand(Command):
     def __init__(self):
@@ -54,9 +57,10 @@ class PruneBuilderCommand(Command):
         except subprocess.CalledProcessError as e:
             print(f"{Fore.RED}Ошибка при очистке данных сборщика: {str(e)}{Style.RESET_ALL}")
 
+
 class ClearDockerCommand(Command):
     def __init__(self):
-        super().__init__(["-c", "clear"], "Выполняет очистку Docker: images <none>, builder cache, volumes, networks")
+        super().__init__(["-clr", "clear"], "Выполняет очистку Docker: images <none>, builder cache, volumes, networks")
 
     def execute(self, *args):
         self.cleanup_docker_images()
@@ -102,6 +106,7 @@ class ClearDockerCommand(Command):
             print(f"{Fore.GREEN}Неиспользуемые сети успешно удалены!{Style.RESET_ALL}")
         except subprocess.CalledProcessError as e:
             print(f"{Fore.RED}Ошибка при очистке сетей: {str(e)}{Style.RESET_ALL}")
+
 
 class CleanupCommand:
     @staticmethod
