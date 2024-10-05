@@ -7,21 +7,6 @@ from colorama import Fore, Style, init
 
 init(autoreset=True)
 
-
-class GitIgnoreFileModeCommand(Command):
-    def __init__(self):
-        super().__init__("-gi", "Отключает отслеживание изменений прав файлов в Git")
-
-    def execute(self, *args):
-        try:
-            subprocess.run(["git", "config", "core.fileMode", "false"], check=True)
-            print(
-                f"{Fore.GREEN}{Style.BRIGHT}✔ Отслеживание изменений прав файлов в Git успешно отключено.{Style.RESET_ALL}")
-        except subprocess.CalledProcessError:
-            print(
-                f"{Fore.RED}{Style.BRIGHT}✘ Ошибка: Не удалось отключить отслеживание изменений прав файлов в Git.{Style.RESET_ALL}")
-
-
 class ChmodAllCommand(Command):
     def __init__(self):
         super().__init__("-ch", "Рекурсивно выставляет права 777 с директории выполнения")
@@ -131,6 +116,5 @@ class SystemCommand:
     def register(registry):
         registry.register_command(GeneratePasswordHashCommand(), "system")
         registry.register_command(GetExternalIpCommand(), "system")
-        registry.register_command(GitIgnoreFileModeCommand(), "system")
         registry.register_command(ChmodAllCommand(), "system")
         registry.register_command(UpdateScriptCommand(), "system")

@@ -18,7 +18,21 @@ class GitUndoLastCommitCommand(Command):
         except subprocess.CalledProcessError as e:
             print(f"{Fore.RED}Ошибка при отмене последнего коммита: {str(e)}{Style.RESET_ALL}")
 
+class GitIgnoreFileModeCommand(Command):
+    def __init__(self):
+        super().__init__("-gi", "Отключает отслеживание изменений прав файлов в Git")
+
+    def execute(self, *args):
+        try:
+            subprocess.run(["git", "config", "core.fileMode", "false"], check=True)
+            print(
+                f"{Fore.GREEN}{Style.BRIGHT}✔ Отслеживание изменений прав файлов в Git успешно отключено.{Style.RESET_ALL}")
+        except subprocess.CalledProcessError:
+            print(
+                f"{Fore.RED}{Style.BRIGHT}✘ Ошибка: Не удалось отключить отслеживание изменений прав файлов в Git.{Style.RESET_ALL}")
+
 class GitCommand:
     @staticmethod
     def register(registry):
         registry.register_command(GitUndoLastCommitCommand(), "git")
+        registry.register_command(GitIgnoreFileModeCommand(), "git")

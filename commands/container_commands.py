@@ -1,5 +1,7 @@
 # commands/container_commands.py
 import subprocess
+import asyncio
+import time
 from colorama import Fore, Style, init
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from queue import Queue
@@ -8,32 +10,33 @@ from .command_registry import Command
 
 init(autoreset=True)
 
-
 class StopAllContainersCommand(Command):
     def __init__(self):
         super().__init__(["-d", "down"], "Останавливает все запущенные контейнеры или контейнеры по фильтру имени")
 
-    def stop_container(self, container_id, container_name):
+    async def stop_container(self, container_id, container_name):
         try:
-            process = subprocess.Popen(["docker", "stop", container_id], stdout=subprocess.DEVNULL,
-                                       stderr=subprocess.PIPE)
-            _, stderr = process.communicate()
+            process = await asyncio.create_subprocess_exec(
+                "docker", "kill", container_id,
+                stdout=asyncio.subprocess.DEVNULL,
+                stderr=asyncio.subprocess.PIPE
+            )
+            _, stderr = await process.communicate()
             if process.returncode == 0:
                 return container_name, True
             return container_name, False, stderr.decode().strip()
         except Exception as e:
             return container_name, False, str(e)
 
-    def execute(self, *args):
-        filter_option = args[0] if args else ""
-        if filter_option:
-            self.stop_filtered_containers(filter_option)
-        else:
-            self.stop_all_containers()
+    async def stop_all_containers(self):
+        start_time = time.time()
 
-    def stop_all_containers(self):
-        result = subprocess.run(["docker", "ps", "--format", "{{.ID}}\t{{.Names}}"], capture_output=True, text=True)
-        container_data = result.stdout.strip().splitlines()
+        process = await asyncio.create_subprocess_exec(
+            "docker", "ps", "--format", "{{.ID}}\t{{.Names}}",
+            stdout=asyncio.subprocess.PIPE
+        )
+        stdout, _ = await process.communicate()
+        container_data = stdout.decode().strip().splitlines()
 
         if not container_data:
             print(Fore.RED + "🚫 Нет запущенных контейнеров для остановки.")
@@ -41,46 +44,43 @@ class StopAllContainersCommand(Command):
 
         print(Fore.BLUE + "🔄 Остановка всех запущенных контейнеров:")
 
-        container_queue = Queue()
+        tasks = []
         max_name_length = 0
 
         for cid in container_data:
             container_id, container_name = cid.split('\t')
-            container_queue.put((container_id, container_name))
+            tasks.append(self.stop_container(container_id, container_name))
             max_name_length = max(max_name_length, len(container_name))
 
         stopped_containers = []
         failed_containers = []
 
-        with ThreadPoolExecutor(max_workers=20) as executor:
-            futures = {executor.submit(self.stop_container, container_id, container_name): container_name
-                       for container_id, container_name in
-                       [container_queue.get() for _ in range(container_queue.qsize())]}
-
-            with tqdm(total=len(futures), desc="Остановка контейнеров", unit="container", ncols=100) as pbar:
-                for future in as_completed(futures):
-                    container_name, success, *error = future.result()
-                    if success:
-                        stopped_containers.append(container_name)
-                    else:
-                        failed_containers.append((container_name, error[0]))
-                    pbar.update(1)
-
-        status_msg = "остановлен"
-
-        for name in stopped_containers:
-            print(f"{Fore.GREEN}{name.ljust(max_name_length)} {Fore.RED}{status_msg}")
+        for task in asyncio.as_completed(tasks):
+            container_name, success, *error = await task
+            if success:
+                stopped_containers.append(container_name)
+                print(f"{Fore.GREEN}{container_name.ljust(max_name_length)} {Fore.RED}остановлен")
+            else:
+                failed_containers.append((container_name, error[0]))
+                print(f"{Fore.RED}{container_name.ljust(max_name_length)}: {Fore.YELLOW}{error[0]}")
 
         if failed_containers:
             print(Fore.RED + "\n❗ Некоторые контейнеры не удалось остановить:")
             for name, error in failed_containers:
                 print(f"{Fore.RED}{name.ljust(max_name_length)}: {Fore.YELLOW}{error}")
 
-    def stop_filtered_containers(self, filter_option):
-        result = subprocess.run(
-            ["docker", "ps", "--filter", f"name={filter_option}", "--format", "{{.ID}}\t{{.Names}}"],
-            capture_output=True, text=True)
-        container_data = result.stdout.strip().splitlines()
+        total_time = time.time() - start_time
+        print(f"\n⏱ Время выполнения: {total_time:.2f} секунд")
+
+    async def stop_filtered_containers(self, filter_option):
+        start_time = time.time()
+
+        process = await asyncio.create_subprocess_exec(
+            "docker", "ps", "--filter", f"name={filter_option}", "--format", "{{.ID}}\t{{.Names}}",
+            stdout=asyncio.subprocess.PIPE
+        )
+        stdout, _ = await process.communicate()
+        container_data = stdout.decode().strip().splitlines()
 
         if not container_data:
             print(Fore.RED + f"🚫 Контейнеры, соответствующие фильтру '{filter_option}', не найдены.")
@@ -88,41 +88,40 @@ class StopAllContainersCommand(Command):
 
         print(Fore.BLUE + f"🔍 Остановка контейнеров, соответствующих фильтру {Fore.YELLOW}{filter_option}{Fore.BLUE}:")
 
-        container_queue = Queue()
+        tasks = []
         max_name_length = 0
 
         for cid in container_data:
             container_id, container_name = cid.split('\t')
-            container_queue.put((container_id, container_name))
+            tasks.append(self.stop_container(container_id, container_name))
             max_name_length = max(max_name_length, len(container_name))
 
         stopped_containers = []
         failed_containers = []
 
-        with ThreadPoolExecutor(max_workers=20) as executor:
-            futures = {executor.submit(self.stop_container, container_id, container_name): container_name
-                       for container_id, container_name in
-                       [container_queue.get() for _ in range(container_queue.qsize())]}
-
-            with tqdm(total=len(futures), desc="Остановка контейнеров", unit="container", ncols=100) as pbar:
-                for future in as_completed(futures):
-                    container_name, success, *error = future.result()
-                    if success:
-                        stopped_containers.append(container_name)
-                    else:
-                        failed_containers.append((container_name, error[0]))
-                    pbar.update(1)
-
-        status_msg = "остановлен"
-
-        for name in stopped_containers:
-            print(f"{Fore.GREEN}{name.ljust(max_name_length)} {Fore.RED}{status_msg}")
+        for task in asyncio.as_completed(tasks):
+            container_name, success, *error = await task
+            if success:
+                stopped_containers.append(container_name)
+                print(f"{Fore.GREEN}{container_name.ljust(max_name_length)} {Fore.RED}остановлен")
+            else:
+                failed_containers.append((container_name, error[0]))
+                print(f"{Fore.RED}{container_name.ljust(max_name_length)}: {Fore.YELLOW}{error[0]}")
 
         if failed_containers:
             print(Fore.RED + "\n❗ Некоторые контейнеры не удалось остановить:")
             for name, error in failed_containers:
                 print(f"{Fore.RED}{name.ljust(max_name_length)}: {Fore.YELLOW}{error}")
 
+        total_time = time.time() - start_time
+        print(f"\n⏱ Время выполнения: {total_time:.2f} секунд")
+
+    def execute(self, *args):
+        filter_option = args[0] if args else ""
+        if filter_option:
+            asyncio.run(self.stop_filtered_containers(filter_option))
+        else:
+            asyncio.run(self.stop_all_containers())
 
 class ListContainersCommand(Command):
     def __init__(self, names, filter_option, title, format_option):
