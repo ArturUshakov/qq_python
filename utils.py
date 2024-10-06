@@ -1,7 +1,6 @@
 # utils.py
 import re
 import os
-import subprocess
 import requests
 import time
 import json

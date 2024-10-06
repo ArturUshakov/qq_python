@@ -2,11 +2,7 @@
 import subprocess
 import asyncio
 import time
-import difflib
 from colorama import Fore, Style, init
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from queue import Queue
-from tqdm import tqdm
 from .command_registry import Command
 
 init(autoreset=True)
