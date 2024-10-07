@@ -1,3 +1,4 @@
+import os
 import subprocess
 import sys
 import logging
@@ -8,14 +9,14 @@ from logging.handlers import RotatingFileHandler
 init(autoreset=True)
 
 log_handler = RotatingFileHandler(
-    filename='app.log',
+    filename=f"{os.getenv('HOME')}/qq/app.log",
     mode='a',
     maxBytes=0,
     backupCount=0,
 )
 
 
-def clear_log_if_exceeds_limit(filename='app.log', limit=1000):
+def clear_log_if_exceeds_limit(filename=f"{os.getenv('HOME')}/qq/app.log", limit=1000):
     try:
         with open(filename, 'r+') as f:
             lines = f.readlines()
