@@ -62,6 +62,14 @@ class UpdateScriptCommand(Command):
     def __init__(self):
         super().__init__(["update", "upgrade"], "Обновляет скрипт до последней версии")
 
+    def change_ownership_with_sudo(repo_dir):
+        try:
+            subprocess.run(["sudo", "chmod", "777", "-R", repo_dir], check=True)
+            print("✔ Права на папку успешно обновлены.")
+        except subprocess.CalledProcessError as e:
+            print(f"✘ Ошибка при изменении прав доступа: {e}")
+            sys.exit(1)
+
     def execute(self, *args):
         home_dir = os.path.expanduser("~")
         repo_dir = os.path.join(home_dir, "qq")
@@ -92,7 +100,6 @@ class UpdateScriptCommand(Command):
             print(f"{Fore.YELLOW}🗑 Удаление архива...{Style.RESET_ALL}")
             os.remove(zip_path)
 
-            # Перемещение файлов из временной директории
             temp_dir = next(os.path.join(repo_dir, d) for d in os.listdir(repo_dir)
                             if os.path.isdir(os.path.join(repo_dir, d)) and d.startswith("ArturUshakov-qq"))
             for file_name in os.listdir(temp_dir):
@@ -100,19 +107,18 @@ class UpdateScriptCommand(Command):
                 dest_path = os.path.join(repo_dir, file_name)
 
                 if os.path.exists(dest_path):
-                    if os.path.isdir(dest_path):
-                        shutil.rmtree(dest_path)
-                    else:
+                    if os.path.isfile(dest_path):
                         os.remove(dest_path)
+                    elif os.path.isdir(dest_path):
+                        shutil.rmtree(dest_path)
 
                 shutil.move(src_path, dest_path)
 
             print(f"{Fore.YELLOW}🗑 Удаление временной директории...{Style.RESET_ALL}")
             shutil.rmtree(temp_dir)
 
-            # Удаление ненужных файлов
             print(f"{Fore.YELLOW}🗑 Удаление ненужных файлов...{Style.RESET_ALL}")
-            files_to_remove = [".github", "README.md", ".gitignore"]
+            files_to_remove = [".github", "README.md", ".gitignore", "install.sh"]
             for file_name in files_to_remove:
                 file_path = os.path.join(repo_dir, file_name)
                 if os.path.isdir(file_path):
@@ -120,9 +126,7 @@ class UpdateScriptCommand(Command):
                 elif os.path.isfile(file_path):
                     os.remove(file_path)
 
-            # Установка прав на папку
-            print(f"{Fore.YELLOW}Выставление прав на папку...{Style.RESET_ALL}")
-            shutil.chown(repo_dir, user=os.getenv("SUDO_USER", os.getenv("USER")), group=os.getenv("SUDO_USER", os.getenv("USER")))
+            change_ownership_with_sudo(repo_dir)
 
             print(f"{Fore.GREEN}✔ Скрипт успешно обновлен до последней версии!{Style.RESET_ALL}")
         except requests.exceptions.RequestException as e:
