@@ -66,7 +66,6 @@ class ClearDockerCommand(Command):
         self.cleanup_docker_images()
         self.prune_builder()
         self.cleanup_volumes()
-        self.cleanup_networks()
 
     def cleanup_docker_images(self):
         print(f"{Fore.YELLOW}Поиск <none> images...{Style.RESET_ALL}")
@@ -98,14 +97,6 @@ class ClearDockerCommand(Command):
             print(f"{Fore.GREEN}Неиспользуемые тома успешно удалены!{Style.RESET_ALL}")
         except subprocess.CalledProcessError as e:
             print(f"{Fore.RED}Ошибка при очистке томов: {str(e)}{Style.RESET_ALL}")
-
-    def cleanup_networks(self):
-        print(f"{Fore.YELLOW}Очистка неиспользуемых сетей...{Style.RESET_ALL}")
-        try:
-            subprocess.run(["docker", "network", "prune", "-f"], check=True)
-            print(f"{Fore.GREEN}Неиспользуемые сети успешно удалены!{Style.RESET_ALL}")
-        except subprocess.CalledProcessError as e:
-            print(f"{Fore.RED}Ошибка при очистке сетей: {str(e)}{Style.RESET_ALL}")
 
 
 class CleanupCommand:

@@ -57,18 +57,17 @@ class GeneratePasswordHashCommand(Command):
             print(
                 f"{Fore.RED}{Style.BRIGHT}✘ Ошибка: Команды htpasswd, PHP и OpenSSL не найдены. Установите одну из них для генерации хеша.{Style.RESET_ALL}")
 
+def change_ownership_with_sudo(repo_dir):
+    try:
+        subprocess.run(["sudo", "chmod", "777", "-R", repo_dir], check=True)
+        print("✔ Права на папку успешно обновлены.")
+    except subprocess.CalledProcessError as e:
+        print(f"✘ Ошибка при изменении прав доступа: {e}")
+        sys.exit(1)
 
 class UpdateScriptCommand(Command):
     def __init__(self):
         super().__init__(["update", "upgrade"], "Обновляет скрипт до последней версии")
-
-    def change_ownership_with_sudo(self, repo_dir):
-        try:
-            subprocess.run(["sudo", "chmod", "777", "-R", repo_dir], check=True)
-            print("✔ Права на папку успешно обновлены.")
-        except subprocess.CalledProcessError as e:
-            print(f"✘ Ошибка при изменении прав доступа: {e}")
-            sys.exit(1)
 
     def execute(self, *args):
         home_dir = os.path.expanduser("~")
@@ -126,7 +125,7 @@ class UpdateScriptCommand(Command):
                 elif os.path.isfile(file_path):
                     os.remove(file_path)
 
-            self.change_ownership_with_sudo(repo_dir)
+            change_ownership_with_sudo(repo_dir)
 
             print(f"{Fore.GREEN}✔ Скрипт успешно обновлен до последней версии!{Style.RESET_ALL}")
         except requests.exceptions.RequestException as e:
