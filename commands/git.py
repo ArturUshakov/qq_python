@@ -8,7 +8,7 @@ init(autoreset=True)
 
 class GitUndoLastCommitCommand(Command):
     def __init__(self):
-        super().__init__(["-сlс", "clear-last-commit"], "Отменяет последний коммит, но оставляет изменения")
+        super().__init__(["-clc", "clear-last-commit"], "Отменяет последний коммит, но оставляет изменения")
 
     def execute(self, *args):
         try:

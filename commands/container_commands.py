@@ -25,16 +25,18 @@ class StopAllContainersCommand(Command):
             return
 
         print(Fore.BLUE + "🔄 Остановка всех запущенных контейнеров:")
-
-        try:
-            await asyncio.create_subprocess_exec(
+        if container_ids:
+            kill_process = await asyncio.create_subprocess_exec(
                 "docker", "kill", *container_ids,
                 stdout=asyncio.subprocess.DEVNULL,
                 stderr=asyncio.subprocess.PIPE
             )
-            print(Fore.GREEN + f"✔ Все контейнеры остановлены.")
-        except Exception as e:
-            print(Fore.RED + f"✘ Ошибка при остановке контейнеров: {str(e)}")
+            _, stderr = await kill_process.communicate()
+
+            if kill_process.returncode == 0:
+                print(Fore.GREEN + f"✔ Все контейнеры остановлены.")
+            else:
+                print(Fore.RED + f"✘ Ошибка при остановке контейнеров: {stderr.decode()}")
 
         total_time = time.time() - start_time
         print(f"\n⏱ Время выполнения: {total_time:.2f} секунд")
@@ -66,28 +68,32 @@ class StopAllContainersCommand(Command):
                 return
 
         print(Fore.BLUE + f"🔍 Остановка контейнеров с частью имени/проекта {Fore.YELLOW}{filter_option}{Fore.BLUE}:")
-
-        container_ids = [line.split('\t')[0] for line in matching_containers]
-
-        try:
-            await asyncio.create_subprocess_exec(
+        if matching_containers:
+            container_ids = [line.split('\t')[0] for line in matching_containers]
+            kill_process = await asyncio.create_subprocess_exec(
                 "docker", "kill", *container_ids,
                 stdout=asyncio.subprocess.DEVNULL,
                 stderr=asyncio.subprocess.PIPE
             )
-            print(Fore.GREEN + f"✔ Все контейнеры остановлены.")
-        except Exception as e:
-            print(Fore.RED + f"✘ Ошибка при остановке контейнеров: {str(e)}")
+            _, stderr = await kill_process.communicate()
+
+            if kill_process.returncode == 0:
+                print(Fore.GREEN + f"✔ Все контейнеры остановлены.")
+            else:
+                print(Fore.RED + f"✘ Ошибка при остановке контейнеров: {stderr.decode()}")
 
         total_time = time.time() - start_time
         print(f"\n⏱ Время выполнения: {total_time:.2f} секунд")
 
     def execute(self, *args):
         filter_option = args[0] if args else ""
+        asyncio.run(self.execute_async(filter_option))
+
+    async def execute_async(self, filter_option):
         if filter_option:
-            asyncio.run(self.stop_filtered_containers(filter_option))
+            await self.stop_filtered_containers(filter_option)
         else:
-            asyncio.run(self.stop_all_containers())
+            await self.stop_all_containers()
 
 class ListContainersCommand(Command):
     def __init__(self, names, filter_option, title, format_option):
