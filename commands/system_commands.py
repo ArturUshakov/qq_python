@@ -62,7 +62,7 @@ class UpdateScriptCommand(Command):
     def __init__(self):
         super().__init__(["update", "upgrade"], "Обновляет скрипт до последней версии")
 
-    def change_ownership_with_sudo(repo_dir):
+    def change_ownership_with_sudo(self, repo_dir):
         try:
             subprocess.run(["sudo", "chmod", "777", "-R", repo_dir], check=True)
             print("✔ Права на папку успешно обновлены.")
@@ -126,7 +126,7 @@ class UpdateScriptCommand(Command):
                 elif os.path.isfile(file_path):
                     os.remove(file_path)
 
-            change_ownership_with_sudo(repo_dir)
+            self.change_ownership_with_sudo(repo_dir)
 
             print(f"{Fore.GREEN}✔ Скрипт успешно обновлен до последней версии!{Style.RESET_ALL}")
         except requests.exceptions.RequestException as e:
