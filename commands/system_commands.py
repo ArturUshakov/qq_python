@@ -71,13 +71,13 @@ class UpdateScriptCommand(Command):
             os.makedirs(repo_dir)
 
         try:
-            print(f"{Fore.YELLOW}{Style.BRIGHT}🔄 Получение информации о последнем релизе...{Style.RESET_ALL}")
+            print("🔄 Получение информации о последнем релизе...")
             response = requests.get(release_url)
             response.raise_for_status()
             release_data = response.json()
             zip_url = release_data["zipball_url"]
 
-            print(f"{Fore.YELLOW}{Style.BRIGHT}⚙ Скачивание исходного кода последнего релиза...{Style.RESET_ALL}")
+            print("⚙ Скачивание исходного кода последнего релиза...")
             zip_response = requests.get(zip_url)
             zip_response.raise_for_status()
 
@@ -89,10 +89,16 @@ class UpdateScriptCommand(Command):
             with zipfile.ZipFile(zip_path, "r") as z:
                 z.extractall(repo_dir)
 
-            print(f"{Fore.YELLOW}{Style.BRIGHT}🗑 Удаление архива...{Style.RESET_ALL}")
+            print("🗑 Удаление архива...")
             os.remove(zip_path)
 
-            print(f"{Fore.YELLOW}{Style.BRIGHT}🗑 Удаление ненужных файлов...{Style.RESET_ALL}")
+            temp_dir = next(os.path.join(repo_dir, d) for d in os.listdir(repo_dir) if os.path.isdir(os.path.join(repo_dir, d)) and d.startswith("ArturUshakov-qq"))
+            for file_name in os.listdir(temp_dir):
+                shutil.move(os.path.join(temp_dir, file_name), repo_dir)
+
+            shutil.rmtree(temp_dir)
+
+            print("🗑 Удаление ненужных файлов...")
             files_to_remove = [".github", "README.md", ".gitignore"]
             for file_name in files_to_remove:
                 file_path = os.path.join(repo_dir, file_name)
@@ -101,12 +107,15 @@ class UpdateScriptCommand(Command):
                 elif os.path.isfile(file_path):
                     os.remove(file_path)
 
-            print(f"{Fore.GREEN}{Style.BRIGHT}✔ Скрипт успешно обновлен до последней версии!{Style.RESET_ALL}")
-        except requests.exceptions.RequestException:
-            print(f"{Fore.RED}{Style.BRIGHT}✘ Ошибка при скачивании исходного кода.{Style.RESET_ALL}")
+            print("Выставление прав на папку...")
+            shutil.chown(repo_dir, user=os.getenv("SUDO_USER", os.getenv("USER")), group=os.getenv("SUDO_USER", os.getenv("USER")))
+
+            print("✔ Скрипт успешно обновлен до последней версии!")
+        except requests.exceptions.RequestException as e:
+            print(f"✘ Ошибка при скачивании исходного кода: {e}")
             sys.exit(1)
         except zipfile.BadZipFile:
-            print(f"{Fore.RED}{Style.BRIGHT}✘ Ошибка распаковки архива.{Style.RESET_ALL}")
+            print("✘ Ошибка распаковки архива.")
             sys.exit(1)
 
 
