@@ -71,13 +71,13 @@ class UpdateScriptCommand(Command):
             os.makedirs(repo_dir)
 
         try:
-            print("🔄 Получение информации о последнем релизе...")
+            print(f"{Fore.YELLOW}🔄 Получение информации о последнем релизе...{Style.RESET_ALL}")
             response = requests.get(release_url)
             response.raise_for_status()
             release_data = response.json()
             zip_url = release_data["zipball_url"]
 
-            print("⚙ Скачивание исходного кода последнего релиза...")
+            print(f"{Fore.YELLOW}⚙ Скачивание исходного кода последнего релиза...{Style.RESET_ALL}")
             zip_response = requests.get(zip_url)
             zip_response.raise_for_status()
 
@@ -89,16 +89,29 @@ class UpdateScriptCommand(Command):
             with zipfile.ZipFile(zip_path, "r") as z:
                 z.extractall(repo_dir)
 
-            print("🗑 Удаление архива...")
+            print(f"{Fore.YELLOW}🗑 Удаление архива...{Style.RESET_ALL}")
             os.remove(zip_path)
 
-            temp_dir = next(os.path.join(repo_dir, d) for d in os.listdir(repo_dir) if os.path.isdir(os.path.join(repo_dir, d)) and d.startswith("ArturUshakov-qq"))
+            # Перемещение файлов из временной директории
+            temp_dir = next(os.path.join(repo_dir, d) for d in os.listdir(repo_dir)
+                            if os.path.isdir(os.path.join(repo_dir, d)) and d.startswith("ArturUshakov-qq"))
             for file_name in os.listdir(temp_dir):
-                shutil.move(os.path.join(temp_dir, file_name), repo_dir)
+                src_path = os.path.join(temp_dir, file_name)
+                dest_path = os.path.join(repo_dir, file_name)
 
+                if os.path.exists(dest_path):
+                    if os.path.isdir(dest_path):
+                        shutil.rmtree(dest_path)
+                    else:
+                        os.remove(dest_path)
+
+                shutil.move(src_path, dest_path)
+
+            print(f"{Fore.YELLOW}🗑 Удаление временной директории...{Style.RESET_ALL}")
             shutil.rmtree(temp_dir)
 
-            print("🗑 Удаление ненужных файлов...")
+            # Удаление ненужных файлов
+            print(f"{Fore.YELLOW}🗑 Удаление ненужных файлов...{Style.RESET_ALL}")
             files_to_remove = [".github", "README.md", ".gitignore"]
             for file_name in files_to_remove:
                 file_path = os.path.join(repo_dir, file_name)
@@ -107,17 +120,17 @@ class UpdateScriptCommand(Command):
                 elif os.path.isfile(file_path):
                     os.remove(file_path)
 
-            print("Выставление прав на папку...")
+            # Установка прав на папку
+            print(f"{Fore.YELLOW}Выставление прав на папку...{Style.RESET_ALL}")
             shutil.chown(repo_dir, user=os.getenv("SUDO_USER", os.getenv("USER")), group=os.getenv("SUDO_USER", os.getenv("USER")))
 
-            print("✔ Скрипт успешно обновлен до последней версии!")
+            print(f"{Fore.GREEN}✔ Скрипт успешно обновлен до последней версии!{Style.RESET_ALL}")
         except requests.exceptions.RequestException as e:
-            print(f"✘ Ошибка при скачивании исходного кода: {e}")
+            print(f"{Fore.RED}✘ Ошибка при скачивании исходного кода: {e}{Style.RESET_ALL}")
             sys.exit(1)
         except zipfile.BadZipFile:
-            print("✘ Ошибка распаковки архива.")
+            print(f"{Fore.RED}✘ Ошибка распаковки архива.{Style.RESET_ALL}")
             sys.exit(1)
-
 
 class GetExternalIpCommand(Command):
     def __init__(self):

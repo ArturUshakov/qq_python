@@ -11,3 +11,5 @@ if [ -f /home/artur/qq_test/qq ]; then
 else
     echo '✘ Ошибка: файл не был скомпилирован'
 fi
+
+sudo chmod -R 777 /home/artur/qq_test
