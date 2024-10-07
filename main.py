@@ -5,6 +5,7 @@ import logging
 import traceback
 from colorama import Fore, Style, init
 from logging.handlers import RotatingFileHandler
+from utils import check_for_updates
 
 init(autoreset=True)
 
@@ -75,7 +76,6 @@ def safe_execute_command(command, *args):
 
 def main():
     from commands import CommandRegistry
-    from utils import check_for_updates
 
     logging.info("Программа запущена")
 
@@ -92,7 +92,6 @@ def main():
 
     if command:
         safe_execute_command(command, *sys.argv[2:])
-        check_for_updates()
         logging.info("Команда успешно выполнена")
         return
 
@@ -114,6 +113,7 @@ if __name__ == "__main__":
     try:
         clear_log_if_exceeds_limit()
         main()
+        check_for_updates()
     except Exception as e:
         log_exception(e)
         sys.exit(1)

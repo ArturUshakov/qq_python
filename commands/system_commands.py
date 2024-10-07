@@ -2,6 +2,10 @@
 import os
 import subprocess
 import sys
+import requests
+import zipfile
+import io
+import shutil
 from .command_registry import Command
 from colorama import Fore, Style, init
 
@@ -61,28 +65,48 @@ class UpdateScriptCommand(Command):
     def execute(self, *args):
         home_dir = os.path.expanduser("~")
         repo_dir = os.path.join(home_dir, "qq")
+        release_url = "https://api.github.com/repos/ArturUshakov/qq/releases/latest"
 
-        if not os.path.exists(os.path.join(repo_dir, ".git")):
-            print(
-                f"{Fore.RED}{Style.BRIGHT}✘ Ошибка: Папка $HOME/qq не настроена как Git репозиторий.{Style.RESET_ALL}")
-            sys.exit(1)
+        if not os.path.exists(repo_dir):
+            os.makedirs(repo_dir)
 
         try:
-            os.chdir(repo_dir)
+            print(f"{Fore.YELLOW}{Style.BRIGHT}🔄 Получение информации о последнем релизе...{Style.RESET_ALL}")
+            response = requests.get(release_url)
+            response.raise_for_status()
+            release_data = response.json()
+            zip_url = release_data["zipball_url"]
 
-            print(f"{Fore.YELLOW}{Style.BRIGHT}⚙ Откат к чистой версии ветки master...{Style.RESET_ALL}")
-            subprocess.run(["git", "reset", "--hard", "origin/master"], check=True, stdout=subprocess.DEVNULL,
-                           stderr=subprocess.DEVNULL)
+            print(f"{Fore.YELLOW}{Style.BRIGHT}⚙ Скачивание исходного кода последнего релиза...{Style.RESET_ALL}")
+            zip_response = requests.get(zip_url)
+            zip_response.raise_for_status()
 
-            print(
-                f"{Fore.YELLOW}{Style.BRIGHT}🔄 Получение последних изменений из удаленного репозитория...{Style.RESET_ALL}")
-            subprocess.run(["git", "pull", "origin", "master"], check=True, stdout=subprocess.DEVNULL,
-                           stderr=subprocess.DEVNULL)
+            zip_path = os.path.join(repo_dir, "latest_release.zip")
 
-            print(
-                f"{Fore.GREEN}{Style.BRIGHT}✔ Скрипт успешно обновлен до последней версии в ветке master!{Style.RESET_ALL}")
-        except subprocess.CalledProcessError:
-            print(f"{Fore.RED}{Style.BRIGHT}✘ Ошибка обновления скрипта.{Style.RESET_ALL}")
+            with open(zip_path, "wb") as f:
+                f.write(zip_response.content)
+
+            with zipfile.ZipFile(zip_path, "r") as z:
+                z.extractall(repo_dir)
+
+            print(f"{Fore.YELLOW}{Style.BRIGHT}🗑 Удаление архива...{Style.RESET_ALL}")
+            os.remove(zip_path)
+
+            print(f"{Fore.YELLOW}{Style.BRIGHT}🗑 Удаление ненужных файлов...{Style.RESET_ALL}")
+            files_to_remove = [".github", "README.md", ".gitignore"]
+            for file_name in files_to_remove:
+                file_path = os.path.join(repo_dir, file_name)
+                if os.path.isdir(file_path):
+                    shutil.rmtree(file_path)
+                elif os.path.isfile(file_path):
+                    os.remove(file_path)
+
+            print(f"{Fore.GREEN}{Style.BRIGHT}✔ Скрипт успешно обновлен до последней версии!{Style.RESET_ALL}")
+        except requests.exceptions.RequestException:
+            print(f"{Fore.RED}{Style.BRIGHT}✘ Ошибка при скачивании исходного кода.{Style.RESET_ALL}")
+            sys.exit(1)
+        except zipfile.BadZipFile:
+            print(f"{Fore.RED}{Style.BRIGHT}✘ Ошибка распаковки архива.{Style.RESET_ALL}")
             sys.exit(1)
 
 
