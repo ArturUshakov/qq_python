@@ -222,7 +222,7 @@ def cleanup_docker_images():
 
 class ExecInContainerCommand(Command):
     def __init__(self):
-        super().__init__(["-e", "exec"], "Выполняет команду внутри контейнера (например fpm ls)")
+        super().__init__(["-e", "exec"], "Для работы с контейнерами, можно указать -r для входа из под рута")
 
     def get_containers(self):
         try:
@@ -264,7 +264,24 @@ class ExecInContainerCommand(Command):
 
         return matching_containers[0]
 
-    def exec_command(self, container_name, command):
+    def check_container_running(self, container_name):
+        try:
+            result = subprocess.run(
+                ["docker", "inspect", "-f", "{{.State.Running}}", container_name],
+                capture_output=True,
+                text=True,
+                check=True
+            )
+            return result.stdout.strip() == "true"
+        except subprocess.CalledProcessError as e:
+            print(Fore.RED + f"✘ Ошибка при проверке состояния контейнера: {str(e)}")
+            return False
+
+    def exec_command(self, container_name, command, as_root=False):
+        if not self.check_container_running(container_name):
+            print(Fore.YELLOW + f"⚠ Контейнер '{container_name}' не запущен. Выполнение команды невозможно.")
+            return
+
         if command[0] == "bash":
             try:
                 print(Fore.YELLOW + "⚠ Проверка наличия 'bash'.")
@@ -273,26 +290,52 @@ class ExecInContainerCommand(Command):
                 print(Fore.YELLOW + "⚠ 'bash' не найден, пробую использовать 'sh' вместо этого.")
                 command = ["sh"]
 
+        exec_command = ["docker", "exec", "-it"]
+        if as_root:
+            exec_command += ["--user", "root"]
+
+        exec_command += [container_name] + command
+
         try:
             print(Fore.GREEN + f"✔ Вход в контейнер: {container_name}")
-            subprocess.run(["docker", "exec", "-it", container_name] + command, check=True)
+            process = subprocess.Popen(exec_command)
+            process.wait()
+
+            if not self.check_container_running(container_name):
+                print(Fore.YELLOW + f"⚠ Контейнер '{container_name}' был остановлен или завершен.")
+            else:
+                print(Fore.GREEN + f"✔ Выход из контейнера '{container_name}' успешно завершён.")
+
         except subprocess.CalledProcessError as e:
             print(Fore.RED + f"✘ Ошибка при выполнении команды в контейнере: {str(e)}")
 
     def execute(self, *args):
-        if len(args) < 1:
+        if not args:
             print(Fore.RED + "✘ Укажите часть имени контейнера.")
             return
 
-        partial_name = args[0]
-        command = list(args[1:])
+        as_root = False
+        partial_name = None
+        command = []
+
+        for arg in args:
+            if arg == "-r":
+                as_root = True
+            elif partial_name is None:
+                partial_name = arg
+            else:
+                command.append(arg)
+
+        if partial_name is None:
+            print(Fore.RED + "✘ Укажите часть имени контейнера.")
+            return
 
         if not command:
             command = ["sh"]
 
         container_name = self.find_container(partial_name)
         if container_name:
-            self.exec_command(container_name, command)
+            self.exec_command(container_name, command, as_root=as_root)
 
 class ContainerCommand:
     @staticmethod
