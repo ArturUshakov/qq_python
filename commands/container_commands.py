@@ -138,7 +138,59 @@ class ListContainersCommand(Command):
 class ListRunningContainersCommand(ListContainersCommand):
     def __init__(self):
         super().__init__(["-l", "list"], "", "Запущенные контейнеры",
-                         "{{.Names}}\t{{.Status}}\t{{.Label \"com.docker.compose.project\"}}")
+                         "{{.Names}}\t{{.Status}}\t{{.Label \"com.docker.compose.project\"}}\t{{.Image}}\t{{.Ports}}")
+
+    def translate_status(self, status):
+        if "Up" in status:
+            return "Запущен"
+        elif "Exited" in status:
+            return "Остановлен"
+        elif "Restarting" in status:
+            return "Перезапускается"
+        else:
+            return status
+
+    def list_containers(self):
+        compose_projects = {}
+
+        result = subprocess.run(
+            ["docker", "ps", "--format", self.format_option],
+            capture_output=True, text=True
+        )
+        containers = result.stdout.strip().splitlines()
+
+        for container in containers:
+            parts = container.split("\t")
+            if len(parts) == 5:
+                name, status, project, image, ports = parts
+            else:
+                name, status, project, image = parts
+                ports = ""
+
+            status_ru = self.translate_status(status)
+
+            if status_ru == "Запущен" and "->" in ports:
+                port_info = ports.split(",")[0].split("->")[0].split(":")[-1]
+                if "nginx" in image or "apache" in image:
+                    port_info = f"http://127.0.0.1:{port_info}"
+            elif status_ru == "Запущен":
+                port_info = ports
+            else:
+                port_info = ""
+
+            if project in compose_projects:
+                compose_projects[project].append((name, status_ru, image, port_info))
+            else:
+                compose_projects[project] = [(name, status_ru, image, port_info)]
+
+        print(Fore.BLUE + self.title)
+        for project, containers in compose_projects.items():
+            print(Fore.YELLOW + f"\nПроект: {project}")
+            for name, status, image, port_info in containers:
+                print(f"{Fore.GREEN}{name.ljust(55)} {Fore.CYAN}{status.ljust(20)} {Fore.MAGENTA}{port_info}")
+
+    def execute(self, *args):
+        self.list_containers()
 
 
 class ListAllContainersCommand(ListContainersCommand):
