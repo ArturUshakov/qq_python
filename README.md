@@ -1,74 +1,83 @@
-# qq — Python CLI-компиляция в бинарники (Linux & macOS)
+# qq — Python CLI Binaries for Linux & macOS
 
-## Описание
+## ✨ Overview
 
-Этот проект компилирует Python CLI-приложение (`cli.py`) в нативные бинарные файлы `qq` для Linux и macOS с помощью [Nuitka](https://nuitka.net/).
+**qq** is a Python-based CLI tool compiled into native binaries for **Linux** and **macOS** using [Nuitka](https://nuitka.net/).  
+It provides fast, portable execution without needing to install Python or dependencies.
 
-### 🚀 Возможности:
-- Поддержка Linux (для ubuntu 20.04 и выше) и macOS (universal ARM64)
+## 🚀 Features
 
-### 🛠 Требования:
+- ✅ Cross-platform: runs on Ubuntu 20.04+ and macOS (ARM64 supported)
+- ⚡ Compiled with Nuitka for native performance
+- 🧠 Bash/Zsh autocomplete support
+- 📁 Single binary distribution (`qq-linux`, `qq-macos`)
+- 🛠 Easy to install via script
+
+## 🔧 Requirements (for manual build)
+
 - Python 3.8
-- Nuitka, gcc/clang, build tools (автоматически устанавливаются через GitHub Actions)
+- Nuitka
+- Build tools: `gcc`, `clang`, `zlib`, etc.
 
-### 🧪 Сборка вручную:
+## 🧪 Manual Build Instructions
 
-- Все зависимости описаны в Dockerfile
+You can manually build the `qq` binary using Nuitka:
+
+### Linux
 
 ```bash
-# Linux
 sudo apt install python3 python3-pip gcc g++ clang patchelf zlib1g-dev
 pip install nuitka
 python3 -m nuitka cli.py --onefile --output-filename=qq
-
-# macOS
-brew install llvm zlib
-pip install nuitka
-python3 -m nuitka cli.py --onefile --output-filename=qq
-
-Либо через докер для ubuntu 20.04 и выше использовать make all
 ```
 
-### 📥 Скачать:
-
-Актуальные бинарники доступны на [странице релизов](https://github.com/ArturUshakov/qq_python/releases).
-
----
-
-## Overview
-
-This project compiles a Python CLI tool (`cli.py`) into standalone native binaries `qq` for Linux and macOS using [Nuitka](https://nuitka.net/).
-
-### 🚀 Features:
-- Supports Linux (for Ubuntu 20.04 and above) and macOS (universal ARM64)
-
-### 🛠 Requirements:
-- Python 3.8
-- Nuitka, gcc/clang, build tools (installed via GitHub Actions)
-
-### 🧪 Manual build:
-
-- All dependencies are registered in Dockerfile
+### macOS
 
 ```bash
-# Linux
-sudo apt install python3 python3-pip gcc g++ clang patchelf zlib1g-dev
-pip install nuitka
-python3 -m nuitka cli.py --onefile --output-filename=qq
-
-# macOS
 brew install llvm zlib
 pip install nuitka
 python3 -m nuitka cli.py --onefile --output-filename=qq
-
-Or through the dock for Ubuntu 20.04 and above use Make All
 ```
 
-### 📦 Release:
+Or, if using Docker on Ubuntu 20.04+, run:
 
-Binaries are built and uploaded automatically on push to the `master` branch.
+```bash
+make all
+```
 
-### 📥 Download:
+## 📆 Automated Releases
 
-Visit the [releases page](https://github.com/ArturUshakov/qq_python/releases) to download the latest builds.
+Each push to the `master` branch triggers a GitHub Action that builds and publishes `qq` binaries for:
 
+- `qq-linux`
+- `qq-macos`
+
+## 📅 Download & Install
+
+1. Visit the [latest release](https://github.com/ArturUshakov/qq_python/releases)
+2. Download the appropriate binary for your system:
+    - `qq-linux` for Ubuntu/Linux
+    - `qq-macos` for macOS
+3. Download `qq-setup.sh` and `qq_completions.sh` from the release as well
+
+### 🧰 Install:
+
+In the folder with the downloaded files:
+
+```bash
+chmod +x qq-setup.sh
+./qq-setup.sh
+```
+
+The script will:
+
+- Copy the correct binary to `~/.qq/`
+- Enable autocomplete
+- Add the `qq` alias to your shell config
+- Create a global `/usr/local/bin/qq` entry
+
+Restart your terminal or run:
+
+```bash
+source ~/.bashrc   # or ~/.zshrc on zsh
+```
