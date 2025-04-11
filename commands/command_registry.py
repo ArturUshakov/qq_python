@@ -6,11 +6,11 @@ class Command:
         elif isinstance(names, list):
             self.names = names
         else:
-            raise ValueError("names must be a string or a list of strings")
+            raise ValueError("Имена должны быть строкой или списком строк")
         self.description = description
 
     def execute(self, *args):
-        raise NotImplementedError("Subclasses should implement this method")
+        raise NotImplementedError("Подклассы должны реализовать этот метод")
 
 
 class CommandRegistry:
@@ -20,16 +20,12 @@ class CommandRegistry:
             "container": "Команды контейнеров",
             "system": "Системные команды",
             "cleanup": "Очистка",
-            "git": "GIT",
-            "info": "Информационные команды"
         }
         self.command_groups = {
             "base": {},
             "container": {},
             "system": {},
             "cleanup": {},
-            "info": {},
-            "git": {},
         }
 
     def register_command(self, command, group="base"):
@@ -44,19 +40,15 @@ class CommandRegistry:
         return self.command_groups.get(group, {})
 
     def register_all_commands(self):
-        from .base_commands import BaseCommand
-        from .container_commands import ContainerCommand
-        from .system_commands import SystemCommand
-        from .info_commands import InfoCommand
-        from .cleanup_commands import CleanupCommand
-        from .git import GitCommand
+        from .base import BaseCommand
+        from .container import ContainerCommand
+        from .system import SystemCommand
+        from .cleanup import CleanupCommand
 
         BaseCommand.register(self)
         ContainerCommand.register(self)
         SystemCommand.register(self)
-        InfoCommand.register(self)
         CleanupCommand.register(self)
-        GitCommand.register(self)
 
     def print_help(self):
         help_command = self.get_command("-h")

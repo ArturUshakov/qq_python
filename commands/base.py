@@ -1,4 +1,4 @@
-# commands/base_commands.py
+# commands/base.py
 from colorama import Fore, Style, init
 from .command_registry import Command
 
