@@ -1,4 +1,3 @@
-
 import logging
 import os
 import traceback
@@ -6,6 +5,10 @@ from logging.handlers import RotatingFileHandler
 from colorama import Fore, Style
 
 log_file = os.path.expanduser("~/qq/app.log")
+log_dir = os.path.dirname(log_file)
+
+os.makedirs(log_dir, exist_ok=True)
+
 handler = RotatingFileHandler(log_file, mode='a', maxBytes=0, backupCount=0)
 formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
 handler.setFormatter(formatter)
