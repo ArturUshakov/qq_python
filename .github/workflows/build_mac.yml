@@ -28,8 +28,8 @@ jobs:
 
       - name: ⚙️ Build binary with Nuitka
         run: |
-          python3 cli.py --help
-          python3 -m nuitka cli.py --onefile --follow-imports --output-dir=output --output-filename=qq
+          python3 cli.py
+          python3 -m nuitka cli.py --onefile --follow-imports --output-dir=output --output-filename=qq --no-ccache
           ls -lh ./output
 
       - name: 📤 Upload compiled binary
