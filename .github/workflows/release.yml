@@ -9,6 +9,9 @@ on:
       - '.github/workflows/release.yml'
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build-linux:
     runs-on: ubuntu-20.04
