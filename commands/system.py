@@ -1,4 +1,4 @@
-# commands/system_commands.py
+# commands/system.py
 import os
 import subprocess
 import sys
@@ -65,75 +65,6 @@ def change_ownership_with_sudo(repo_dir):
         print(f"✘ Ошибка при изменении прав доступа: {e}")
         sys.exit(1)
 
-class UpdateScriptCommand(Command):
-    def __init__(self):
-        super().__init__(["update", "upgrade"], "Обновляет скрипт до последней версии")
-
-    def execute(self, *args):
-        home_dir = os.path.expanduser("~")
-        repo_dir = os.path.join(home_dir, "qq")
-        release_url = "https://api.github.com/repos/ArturUshakov/qq/releases/latest"
-
-        if not os.path.exists(repo_dir):
-            os.makedirs(repo_dir)
-
-        try:
-            print(f"{Fore.YELLOW}🔄 Получение информации о последнем релизе...{Style.RESET_ALL}")
-            response = requests.get(release_url)
-            response.raise_for_status()
-            release_data = response.json()
-            zip_url = release_data["zipball_url"]
-
-            print(f"{Fore.YELLOW}⚙ Скачивание исходного кода последнего релиза...{Style.RESET_ALL}")
-            zip_response = requests.get(zip_url)
-            zip_response.raise_for_status()
-
-            zip_path = os.path.join(repo_dir, "latest_release.zip")
-
-            with open(zip_path, "wb") as f:
-                f.write(zip_response.content)
-
-            with zipfile.ZipFile(zip_path, "r") as z:
-                z.extractall(repo_dir)
-
-            print(f"{Fore.YELLOW}🗑 Удаление архива...{Style.RESET_ALL}")
-            os.remove(zip_path)
-
-            temp_dir = next(os.path.join(repo_dir, d) for d in os.listdir(repo_dir)
-                            if os.path.isdir(os.path.join(repo_dir, d)) and d.startswith("ArturUshakov-qq"))
-            for file_name in os.listdir(temp_dir):
-                src_path = os.path.join(temp_dir, file_name)
-                dest_path = os.path.join(repo_dir, file_name)
-
-                if os.path.exists(dest_path):
-                    if os.path.isfile(dest_path):
-                        os.remove(dest_path)
-                    elif os.path.isdir(dest_path):
-                        shutil.rmtree(dest_path)
-
-                shutil.move(src_path, dest_path)
-
-            print(f"{Fore.YELLOW}🗑 Удаление временной директории...{Style.RESET_ALL}")
-            shutil.rmtree(temp_dir)
-
-            print(f"{Fore.YELLOW}🗑 Удаление ненужных файлов...{Style.RESET_ALL}")
-            files_to_remove = [".github", "README.md", ".gitignore", "install.sh"]
-            for file_name in files_to_remove:
-                file_path = os.path.join(repo_dir, file_name)
-                if os.path.isdir(file_path):
-                    shutil.rmtree(file_path)
-                elif os.path.isfile(file_path):
-                    os.remove(file_path)
-
-            change_ownership_with_sudo(repo_dir)
-
-            print(f"{Fore.GREEN}✔ Скрипт успешно обновлен до последней версии!{Style.RESET_ALL}")
-        except requests.exceptions.RequestException as e:
-            print(f"{Fore.RED}✘ Ошибка при скачивании исходного кода: {e}{Style.RESET_ALL}")
-            sys.exit(1)
-        except zipfile.BadZipFile:
-            print(f"{Fore.RED}✘ Ошибка распаковки архива.{Style.RESET_ALL}")
-            sys.exit(1)
 
 class GetExternalIpCommand(Command):
     def __init__(self):
@@ -160,10 +91,59 @@ class GetExternalIpCommand(Command):
             print(f"{Fore.RED}{Style.BRIGHT}⚠️ Ошибка при получении внешнего IP-адреса: {str(e)}{Style.RESET_ALL}")
 
 
+class GitIgnorePermissionsCommand(Command):
+    def __init__(self):
+        super().__init__(
+            ["-gi", "git-ignore"],
+            "Управление отслеживанием прав доступа (chmod) в Git [--help для опций]"
+        )
+
+    def execute(self, *args):
+        if not os.path.isdir(".git"):
+            print(f"{Fore.RED}✘ Это не Git-репозиторий (папка .git не найдена).{Style.RESET_ALL}")
+            return
+
+        arg = args[0] if args else "--disable"
+
+        if arg in ["-h", "--help", "help"]:
+            self.print_help()
+            return
+
+        if arg == "--status":
+            result = subprocess.run(["git", "config", "--get", "core.fileMode"], capture_output=True, text=True)
+            value = result.stdout.strip()
+            if value == "false":
+                print(f"{Fore.GREEN}✔ Git не отслеживает изменения прав доступа (core.fileMode=false).{Style.RESET_ALL}")
+            else:
+                print(f"{Fore.YELLOW}⚠ Git отслеживает изменения прав доступа (core.fileMode={value or 'true'}).{Style.RESET_ALL}")
+
+        elif arg == "--enable":
+            subprocess.run(["git", "config", "core.fileMode", "true"])
+            print(f"{Fore.CYAN}ℹ️ Git теперь будет отслеживать изменения прав доступа (core.fileMode=true).{Style.RESET_ALL}")
+
+        elif arg == "--disable":
+            subprocess.run(["git", "config", "core.fileMode", "false"])
+            print(f"{Fore.GREEN}✔ Git больше не будет отслеживать chmod-изменения (core.fileMode=false).{Style.RESET_ALL}")
+
+        else:
+            print(f"{Fore.RED}✘ Неизвестный аргумент: {arg}{Style.RESET_ALL}")
+            self.print_help()
+
+    def print_help(self):
+        print(f"""{Fore.CYAN}
+Использование: qq -gi [флаг]
+
+Флаги:
+  --disable     Отключить отслеживание изменений прав доступа (по умолчанию)
+  --enable      Включить отслеживание изменений прав
+  --status      Показать текущее состояние core.fileMode
+  -h, --help    Показать эту справку
+{Style.RESET_ALL}""")
+
 class SystemCommand:
     @staticmethod
     def register(registry):
         registry.register_command(GeneratePasswordHashCommand(), "system")
         registry.register_command(GetExternalIpCommand(), "system")
         registry.register_command(ChmodAllCommand(), "system")
-        registry.register_command(UpdateScriptCommand(), "system")
+        registry.register_command(GitIgnorePermissionsCommand(), "system")

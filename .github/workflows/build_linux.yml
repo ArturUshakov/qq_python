@@ -1,0 +1,40 @@
+name: Build Linux Binary
+
+on:
+  push:
+    paths:
+      - '**.py'
+      - '.github/workflows/build_linux.yml'
+  workflow_dispatch:
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 🛎️ Checkout repo
+        uses: actions/checkout@v3
+
+      - name: 🐍 Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.8'
+
+      - name: 📦 Install Nuitka and dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y gcc g++ python3-dev
+          pip install -U pip
+          pip install nuitka
+
+      - name: ⚙️ Build binary with Nuitka
+        run: |
+          python3 cli.py --help  # проверка перед компиляцией
+          python3 -m nuitka cli.py --onefile --follow-imports --output-filename=qq
+          ls -lh ./qq
+
+      - name: 📤 Upload compiled binary
+        uses: actions/upload-artifact@v3
+        with:
+          name: qq-linux
+          path: ./qq

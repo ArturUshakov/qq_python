@@ -1,0 +1,38 @@
+name: Build macOS Binary
+
+on:
+  push:
+    paths:
+      - '**.py'
+      - '.github/workflows/build_mac.yml'
+  workflow_dispatch:
+
+jobs:
+  build-macos:
+    runs-on: macos-latest
+
+    steps:
+      - name: 🛎️ Checkout repo
+        uses: actions/checkout@v3
+
+      - name: 🐍 Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.8'
+
+      - name: 📦 Install Nuitka
+        run: |
+          pip install -U pip
+          pip install nuitka
+
+      - name: ⚙️ Build binary with Nuitka
+        run: |
+          python3 cli.py --help  # тестовый запуск
+          python3 -m nuitka cli.py --onefile --follow-imports --output-filename=qq
+          ls -lh ./qq
+
+      - name: 📤 Upload compiled binary
+        uses: actions/upload-artifact@v3
+        with:
+          name: qq-macos
+          path: ./qq

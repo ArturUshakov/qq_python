@@ -1,7 +1,8 @@
-# commands/container_commands.py
+# commands/container.py
 import subprocess
 import asyncio
 import time
+import re
 from colorama import Fore, Style, init
 from .command_registry import Command
 
@@ -134,7 +135,6 @@ class ListContainersCommand(Command):
     def execute(self, *args):
         self.list_containers()
 
-
 class ListRunningContainersCommand(ListContainersCommand):
     def __init__(self):
         super().__init__(["-l", "list"], "", "Запущенные контейнеры",
@@ -152,6 +152,10 @@ class ListRunningContainersCommand(ListContainersCommand):
 
     def list_containers(self):
         compose_projects = {}
+        WEB_SERVICES = [
+            "nginx", "apache", "node", "vite", "react", "flask",
+            "laravel", "express", "next", "nuxt", "adminer", "grafana", "portainer"
+        ]
 
         result = subprocess.run(
             ["docker", "ps", "--format", self.format_option],
@@ -169,14 +173,18 @@ class ListRunningContainersCommand(ListContainersCommand):
 
             status_ru = self.translate_status(status)
 
+            port_info = ""
             if status_ru == "Запущен" and "->" in ports:
-                port_info = ports.split(",")[0].split("->")[0].split(":")[-1]
-                if "nginx" in image or "apache" in image:
-                    port_info = f"http://127.0.0.1:{port_info}"
+                url_ports = []
+                matches = re.findall(r"(?:0\.0\.0\.0|::|127\.0\.0\.1)?:(\d+)->", ports)
+                for port in matches:
+                    if any(service in image.lower() for service in WEB_SERVICES):
+                        url_ports.append(f"http://localhost:{port}")
+                    else:
+                        url_ports.append(f"{port}/tcp")
+                port_info = ", ".join(sorted(set(url_ports)))
             elif status_ru == "Запущен":
                 port_info = ports
-            else:
-                port_info = ""
 
             if project in compose_projects:
                 compose_projects[project].append((name, status_ru, image, port_info))
@@ -199,65 +207,6 @@ class ListAllContainersCommand(ListContainersCommand):
                          "{{.Names}}\t{{.Status}}\t{{.Label \"com.docker.compose.project\"}}")
 
 
-class ListImagesCommand(Command):
-    def __init__(self):
-        super().__init__(["-li", "list-images"], "Выводит список всех образов")
-
-    def execute(self, *args):
-        print(Fore.BLUE + "📦 Список образов:")
-        print(f"{Fore.BLUE}{'ID':25} {Fore.BLUE}{'РЕПОЗИТОРИЙ':60} {Fore.BLUE}{'ТЕГ':27} {Fore.BLUE}{'РАЗМЕР':15}")
-
-        try:
-            result = subprocess.run(
-                ["docker", "images", "--format", "{{.ID}}\t{{.Repository}}\t{{.Tag}}\t{{.Size}}"],
-                capture_output=True, text=True, check=True
-            )
-            images = result.stdout.strip().splitlines()
-
-            for image in images:
-                id, repository, tag, size = image.split('\t')
-                print(f"{Fore.GREEN}{id:25} {Fore.YELLOW}{repository:60} {Fore.CYAN}{tag:27} {Fore.RED}{size:15}")
-
-        except subprocess.CalledProcessError:
-            print(Fore.RED + "❌ Ошибка при получении списка образов Docker.")
-
-
-class RemoveImageCommand(Command):
-    def __init__(self):
-        super().__init__(["-ri", "remove-image"], "Удаляет image по указанному тегу")
-
-    def execute(self, *args):
-        if not args:
-            print(f"{Fore.RED}{Style.BRIGHT}✘ Ошибка: Пожалуйста, укажите тег версии для удаления.{Style.RESET_ALL}")
-            return
-
-        version = args[0]
-
-        if version == "<none>":
-            cleanup_docker_images()
-            return
-
-        try:
-            result = subprocess.run(
-                ["docker", "images", "--format", "{{.Repository}}\t{{.Tag}}\t{{.ID}}"],
-                capture_output=True, text=True, check=True
-            )
-            images = result.stdout.strip().splitlines()
-            images_to_remove = [image_id for repo, tag, image_id in (img.split('\t') for img in images) if
-                                tag == version]
-
-            if not images_to_remove:
-                print(f"{Fore.YELLOW}{Style.BRIGHT}⚠ Образы с тегом '{version}' не найдены.{Style.RESET_ALL}")
-                return
-
-            for image_id in images_to_remove:
-                subprocess.run(["docker", "rmi", image_id], check=True)
-                print(f"{Fore.GREEN}{Style.BRIGHT}✔ Удален образ с ID: {image_id}{Style.RESET_ALL}")
-
-        except subprocess.CalledProcessError:
-            print(f"{Fore.RED}{Style.BRIGHT}✘ Ошибка при удалении образов Docker.{Style.RESET_ALL}")
-
-
 def cleanup_docker_images():
     try:
         result = subprocess.run(["docker", "images", "-f", "dangling=true", "-q"], capture_output=True, text=True)
@@ -274,7 +223,7 @@ def cleanup_docker_images():
 
 class ExecInContainerCommand(Command):
     def __init__(self):
-        super().__init__(["-e", "exec"], "Для работы с контейнерами, можно указать -r для входа из под рута")
+        super().__init__(["-e", "exec"], "Вход в контейнер (по части имени). Используйте -r для root-доступа.")
 
     def get_containers(self):
         try:
@@ -325,21 +274,19 @@ class ExecInContainerCommand(Command):
                 check=True
             )
             return result.stdout.strip() == "true"
-        except subprocess.CalledProcessError as e:
-            print(Fore.RED + f"✘ Ошибка при проверке состояния контейнера: {str(e)}")
+        except subprocess.CalledProcessError:
             return False
 
     def exec_command(self, container_name, command, as_root=False):
         if not self.check_container_running(container_name):
-            print(Fore.YELLOW + f"⚠ Контейнер '{container_name}' не запущен. Выполнение команды невозможно.")
+            print(Fore.YELLOW + f"⚠ Контейнер '{container_name}' не запущен.")
             return
 
+        # Определение доступного shell
         if command[0] == "bash":
             try:
-                print(Fore.YELLOW + "⚠ Проверка наличия 'bash'.")
                 subprocess.run(["docker", "exec", container_name, "which", "bash"], check=True)
             except subprocess.CalledProcessError:
-                print(Fore.YELLOW + "⚠ 'bash' не найден, пробую использовать 'sh' вместо этого.")
                 command = ["sh"]
 
         exec_command = ["docker", "exec", "-it"]
@@ -351,15 +298,27 @@ class ExecInContainerCommand(Command):
         try:
             print(Fore.GREEN + f"✔ Вход в контейнер: {container_name}")
             process = subprocess.Popen(exec_command)
-            process.wait()
+            exit_code = process.wait()
 
-            if not self.check_container_running(container_name):
-                print(Fore.YELLOW + f"⚠ Контейнер '{container_name}' был остановлен или завершен.")
+            is_running = self.check_container_running(container_name)
+
+            if exit_code == 0 and is_running:
+                print(Fore.GREEN + f"✔ Выход из контейнера '{container_name}' завершён корректно.")
+            elif exit_code == 0 and not is_running:
+                print(Fore.YELLOW + f"⚠ Контейнер '{container_name}' завершился во время вашей сессии.")
+            elif exit_code != 0 and not is_running:
+                print(Fore.RED + f"✘ Контейнер '{container_name}' завершился аварийно (exit code {exit_code}).")
             else:
-                print(Fore.GREEN + f"✔ Выход из контейнера '{container_name}' успешно завершён.")
+                print(Fore.RED + f"✘ Команда завершилась с ошибкой (код {exit_code}).")
 
-        except subprocess.CalledProcessError as e:
+        except KeyboardInterrupt:
+            print(Fore.YELLOW + "\n⚠ Прерывание пользователем (Ctrl+C).")
+
+        except subprocess.SubprocessError as e:
             print(Fore.RED + f"✘ Ошибка при выполнении команды в контейнере: {str(e)}")
+
+        except Exception as e:
+            print(Fore.RED + f"❌ Непредвиденная ошибка: {e}")
 
     def execute(self, *args):
         if not args:
@@ -383,7 +342,7 @@ class ExecInContainerCommand(Command):
             return
 
         if not command:
-            command = ["sh"]
+            command = ["bash"]
 
         container_name = self.find_container(partial_name)
         if container_name:
@@ -396,5 +355,3 @@ class ContainerCommand:
         registry.register_command(ListRunningContainersCommand(), "container")
         registry.register_command(ExecInContainerCommand(), "container")
         registry.register_command(ListAllContainersCommand(), "container")
-        registry.register_command(ListImagesCommand(), "container")
-        registry.register_command(RemoveImageCommand(), "container")
