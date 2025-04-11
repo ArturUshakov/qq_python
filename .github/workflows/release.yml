@@ -65,6 +65,8 @@ jobs:
     needs: [ build-linux, build-macos ]
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v3
+
       - uses: actions/download-artifact@v4
         with:
           name: qq-linux
@@ -75,6 +77,10 @@ jobs:
           name: qq-macos
           path: ./dist
 
+      - name: Copy extra scripts to dist
+        run: |
+          cp qq_completions.sh qq-setup.sh dist/
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
@@ -83,5 +89,7 @@ jobs:
           files: |
             dist/qq-linux
             dist/qq-macos
+            dist/qq_completions.sh
+            dist/qq-setup.sh
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

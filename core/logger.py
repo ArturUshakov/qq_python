@@ -4,7 +4,7 @@ import traceback
 from logging.handlers import RotatingFileHandler
 from colorama import Fore, Style
 
-log_file = os.path.expanduser("~/qq/app.log")
+log_file = os.path.expanduser("~/.qq/app.log")
 log_dir = os.path.dirname(log_file)
 
 os.makedirs(log_dir, exist_ok=True)
