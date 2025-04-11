@@ -20,19 +20,20 @@ jobs:
         with:
           python-version: '3.8'
 
-      - name: 📦 Install Nuitka
+      - name: 📦 Install Nuitka and dependencies
         run: |
-          pip install -U pip
-          pip install nuitka
+          brew install llvm zlib
+          pip install --upgrade pip
+          pip install colorama requests tqdm nuitka
 
       - name: ⚙️ Build binary with Nuitka
         run: |
-          python3 cli.py --help  # тестовый запуск
-          python3 -m nuitka cli.py --onefile --follow-imports --output-filename=qq
-          ls -lh ./qq
+          python3 cli.py --help
+          python3 -m nuitka cli.py --onefile --follow-imports --output-dir=output --output-filename=qq
+          ls -lh ./output
 
       - name: 📤 Upload compiled binary
         uses: actions/upload-artifact@v4
         with:
           name: qq-macos
-          path: ./qq
+          path: ./output/qq

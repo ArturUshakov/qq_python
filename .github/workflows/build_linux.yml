@@ -23,18 +23,29 @@ jobs:
       - name: 📦 Install Nuitka and dependencies
         run: |
           sudo apt update
-          sudo apt install -y gcc g++ python3-dev
-          pip install -U pip
-          pip install nuitka
+          sudo apt install -y \
+            python3 \
+            python3-pip \
+            python3-dev \
+            python3-distutils \
+            gcc \
+            g++ \
+            clang \
+            build-essential \
+            patchelf \
+            zlib1g-dev \
+            curl
+          pip install --upgrade pip
+          pip install colorama requests tqdm nuitka
 
       - name: ⚙️ Build binary with Nuitka
         run: |
-          python3 cli.py --help  # проверка перед компиляцией
-          python3 -m nuitka cli.py --onefile --follow-imports --output-filename=qq
-          ls -lh ./qq
+          python3 cli.py --help
+          python3 -m nuitka cli.py --onefile --follow-imports --output-dir=output --output-filename=qq
+          ls -lh ./output
 
       - name: 📤 Upload compiled binary
         uses: actions/upload-artifact@v4
         with:
           name: qq-linux
-          path: ./qq
+          path: ./output/qq
