@@ -1,7 +1,3 @@
-# docker build -t nuitka_project .
-# docker run --rm -v /home/artur/qq_test:/app/output -it nuitka_project /bin/bash
-# python3.8 -m nuitka cli.py --onefile --follow-imports --output-dir=output --output-filename=qq
-
 FROM ubuntu:20.04
 
 RUN apt-get update && apt-get install -y \
