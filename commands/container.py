@@ -145,23 +145,33 @@ class ListRunningContainersCommand(ListContainersCommand):
             return "Запущен"
         elif "Exited" in status:
             return "Остановлен"
+        elif "Created" in status:
+            return "Создан"
         elif "Restarting" in status:
             return "Перезапускается"
         else:
             return status
 
+    def strip_ansi(self, text):
+        return re.sub(r'\x1b\\[[0-9;]*m', '', text)
+
     def list_containers(self):
-        compose_projects = {}
+        all_projects = {}
+        active_projects = {}
         WEB_SERVICES = [
             "nginx", "apache", "node", "vite", "react", "flask",
             "laravel", "express", "next", "nuxt", "adminer", "grafana", "portainer"
         ]
 
         result = subprocess.run(
-            ["docker", "ps", "--format", self.format_option],
+            ["docker", "ps", "-a", "--format", self.format_option],
             capture_output=True, text=True
         )
         containers = result.stdout.strip().splitlines()
+
+        if not containers:
+            print(Fore.CYAN + "🔹 Нет контейнеров.")
+            return
 
         for container in containers:
             parts = container.split("\t")
@@ -174,52 +184,51 @@ class ListRunningContainersCommand(ListContainersCommand):
             status_ru = self.translate_status(status)
 
             port_info = ""
-            if status_ru == "Запущен" and "->" in ports:
+            if "Up" in status:
                 url_ports = []
-                matches = re.findall(r"(?:0\.0\.0\.0|::|127\.0\.0\.1)?:(\d+)->", ports)
-                for port in matches:
+                matches = re.findall(r'(?:[\d\.]+:)?(\d+)->|^(\d+)/tcp$', ports)
+                for match in matches:
+                    port = match[0] or match[1]
+                    if not port:
+                        continue
                     if any(service in image.lower() for service in WEB_SERVICES):
                         url_ports.append(f"http://localhost:{port}")
                     else:
                         url_ports.append(f"{port}/tcp")
-                port_info = ", ".join(sorted(set(url_ports)))
-            elif status_ru == "Запущен":
+                port_info = ", ".join(sorted(set(url_ports))) if url_ports else ports
+            else:
                 port_info = ports
 
-            if project in compose_projects:
-                compose_projects[project].append((name, status_ru, image, port_info))
+            if project in all_projects:
+                all_projects[project].append((name, status_ru, port_info))
             else:
-                compose_projects[project] = [(name, status_ru, image, port_info)]
+                all_projects[project] = [(name, status_ru, port_info)]
 
-        print(Fore.BLUE + self.title)
-        for project, containers in compose_projects.items():
-            print(Fore.YELLOW + f"\nПроект: {project}")
-            for name, status, image, port_info in containers:
-                print(f"{Fore.GREEN}{name.ljust(55)} {Fore.CYAN}{status.ljust(20)} {Fore.MAGENTA}{port_info}")
+            if "Up" in status:
+                active_projects[project] = True
+
+        print(Fore.BLUE + Style.BRIGHT + self.title)
+        if not active_projects:
+            print(Fore.CYAN + "🔹 Нет активных проектов.")
+            return
+
+        for project in active_projects:
+            print(Fore.YELLOW + Style.BRIGHT + f"\n📦 Проект: {project}")
+            print(Fore.WHITE + "─" * 80)
+            print(f"{Fore.RED}📌 {'Контейнер':30}│ {Fore.GREEN}Статус      │ {Fore.CYAN}Порты / URL")
+            print(Fore.WHITE + "─" * 80)
+            for name, status, port_info in all_projects[project]:
+                name_col = Fore.RED + f"{name}" + Style.RESET_ALL
+                status_col = Fore.GREEN + f"{status}" + Style.RESET_ALL
+                port_col = Fore.CYAN + f"{port_info}" + Style.RESET_ALL
+
+                raw_name_len = len(name)
+                raw_status_len = len(status)
+                print(f"{name_col}{' ' * (32 - raw_name_len)}│ {status_col}{' ' * (12 - raw_status_len)}│ {port_col}")
 
     def execute(self, *args):
         self.list_containers()
 
-
-class ListAllContainersCommand(ListContainersCommand):
-    def __init__(self):
-        super().__init__(["-la", "list-all"], "-a", "Все контейнеры",
-                         "{{.Names}}\t{{.Status}}\t{{.Label \"com.docker.compose.project\"}}")
-
-
-def cleanup_docker_images():
-    try:
-        result = subprocess.run(["docker", "images", "-f", "dangling=true", "-q"], capture_output=True, text=True)
-        image_ids = result.stdout.strip().splitlines()
-
-        if image_ids:
-            subprocess.run(["docker", "rmi"] + image_ids, check=True)
-            print(f"{Fore.GREEN}{Style.BRIGHT}✔ Все images <none> успешно очищены!{Style.RESET_ALL}")
-        else:
-            print(f"{Fore.GREEN}{Style.BRIGHT}ℹ Нет images <none> для очистки.{Style.RESET_ALL}")
-
-    except subprocess.CalledProcessError:
-        print(f"{Fore.RED}{Style.BRIGHT}✘ Ошибка при очистке images <none>.{Style.RESET_ALL}")
 
 class ExecInContainerCommand(Command):
     def __init__(self):
@@ -282,7 +291,6 @@ class ExecInContainerCommand(Command):
             print(Fore.YELLOW + f"⚠ Контейнер '{container_name}' не запущен.")
             return
 
-        # Определение доступного shell
         if command[0] == "bash":
             try:
                 subprocess.run(["docker", "exec", container_name, "which", "bash"], check=True)
@@ -354,4 +362,3 @@ class ContainerCommand:
         registry.register_command(StopAllContainersCommand(), "container")
         registry.register_command(ListRunningContainersCommand(), "container")
         registry.register_command(ExecInContainerCommand(), "container")
-        registry.register_command(ListAllContainersCommand(), "container")

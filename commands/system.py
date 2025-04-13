@@ -13,7 +13,7 @@ init(autoreset=True)
 
 class ChmodAllCommand(Command):
     def __init__(self):
-        super().__init__("-ch", "Рекурсивно выставляет права 777 с директории выполнения")
+        super().__init__(["-ch", "chmod"], "Рекурсивно выставляет права 777 с директории выполнения")
 
     def execute(self, *args):
         try:

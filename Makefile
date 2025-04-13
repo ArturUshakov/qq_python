@@ -1,27 +1,25 @@
 MAKEFLAGS += --no-print-directory --silent
+
 PROJECT_NAME := nuitka_project
-OUTPUT_DIR := /home/artur/qq_test
-DOCKER_IMAGE := $(PROJECT_NAME)
-CONTAINER_NAME := qq_nuitka_temp
+OUTPUT_DIR ?= $(CURDIR)/output
+PYTHON ?= python3.10
 
-.PHONY: build run compile extract clean all
+.PHONY: help build up compile clean all
 
-build:
-	docker build -t $(DOCKER_IMAGE) .
+help:  ## Показать список доступных команд
+	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}'
 
-run:
-	docker run --rm -v $(OUTPUT_DIR):/app/output -it $(DOCKER_IMAGE) /bin/bash
+build:  ## Собрать Docker-образ
+	docker compose build
 
-compile:
-	docker rm -f $(CONTAINER_NAME) 2>/dev/null || true
-	docker run --name $(CONTAINER_NAME) -v $(OUTPUT_DIR):/app/output -w /app $(DOCKER_IMAGE) \
-		python3.8 -m nuitka cli.py --onefile --follow-imports --output-dir=output --output-filename=qq
+up:  ## Запустить контейнер в интерактивном режиме
+	docker compose run --rm qq
 
-extract:
-	docker cp $(CONTAINER_NAME):/app/output/qq ./qq_test/qq
-	docker rm $(CONTAINER_NAME)
+compile: build ## Скомпилировать приложение через Nuitka
+	docker compose run --rm qq \
+		bash -c "export CC='gcc' && $(PYTHON) -m nuitka cli.py --onefile --output-dir=/app/output --output-filename=qq"
 
-clean:
-	rm -rf ./qq_test/qq
+clean:  ## Удалить собранные файлы
+	rm -rf $(OUTPUT_DIR)/qq
 
-all: build compile extract
+all: compile  ## Полная сборка

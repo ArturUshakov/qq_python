@@ -1,5 +1,24 @@
-venv/
-qq_app.log
-dist
-build
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Nuitka build artifacts
+output/
+*.dist/
+*.build/
+*.onefile-build/
+*.nuitka-cache/
+
+# Logs
+errors.log
+
+# IDE
 .idea/
+.vscode/
+
+# System
+.DS_Store
+*.swp
+*.swo

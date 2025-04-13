@@ -1,0 +1,12 @@
+services:
+  qq:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: qq_nuitka_dev
+    working_dir: /app
+    volumes:
+      - ./:/app
+      - ./output:/app/output
+      - ~/.ccache:/root/.ccache
+    tty: true

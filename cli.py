@@ -1,9 +1,13 @@
 import os
 import sys
-sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
+import logging
+import importlib
+import pkgutil
 from colorama import Fore, Style
 from commands.command_registry import CommandRegistry
 from core.logger import safe_execute
+
+logging.basicConfig(filename="errors.log", level=logging.ERROR, format="%(asctime)s %(levelname)s:%(message)s")
 
 def suggest_command(registry, input_cmd):
     import difflib
@@ -14,7 +18,13 @@ def suggest_command(registry, input_cmd):
         for cmd in matches:
             print(f"{Fore.LIGHTCYAN_EX}  • {cmd}{Style.RESET_ALL}")
 
+def autoimport_commands():
+    import commands
+    for _, module_name, _ in pkgutil.iter_modules(commands.__path__):
+        importlib.import_module(f"commands.{module_name}")
+
 def main():
+    autoimport_commands()
     registry = CommandRegistry()
     registry.register_all_commands()
 
@@ -26,7 +36,11 @@ def main():
     command = registry.get_command(input_cmd)
 
     if command:
-        safe_execute(command, *sys.argv[2:])
+        try:
+            safe_execute(command, *sys.argv[2:])
+        except Exception as e:
+            logging.error(f"Ошибка при выполнении команды '{input_cmd}': {e}", exc_info=True)
+            print(f"{Fore.RED}✘ Произошла ошибка. Подробности в errors.log{Style.RESET_ALL}")
     else:
         print(f"{Fore.LIGHTRED_EX}Неизвестная команда: {input_cmd}{Style.RESET_ALL}")
         suggest_command(registry, input_cmd)
