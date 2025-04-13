@@ -28,11 +28,11 @@ class ChmodAllCommand(Command):
 
 class GeneratePasswordHashCommand(Command):
     def __init__(self):
-        super().__init__(["-gph", "generate-password-hash"], "Генерирует хэш пароля")
+        super().__init__(["-gph", "generate-password-hash"], "Генерирует хэш по введённой строке")
 
     def execute(self, *args):
         if not args:
-            print(f"{Fore.RED}{Style.BRIGHT}✘ Ошибка: Пожалуйста, укажите пароль для генерации хеша.{Style.RESET_ALL}")
+            print(f"{Fore.RED}{Style.BRIGHT}✘ Ошибка: Пожалуйста, укажите строку для генерации хеша.{Style.RESET_ALL}")
             return
 
         password = args[0]

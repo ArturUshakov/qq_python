@@ -41,7 +41,7 @@ class CommandRegistry:
 
     def register_all_commands(self):
         from .base import BaseCommand
-        from .container import ContainerCommand
+        from commands.container.ContainerCommand import ContainerCommand
         from .system import SystemCommand
         from .cleanup import CleanupCommand
 
