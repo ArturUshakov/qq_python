@@ -1,4 +1,4 @@
-from cвведённойolorama import Fore, Style
+from colorama import Fore, Style
 import subprocess
 import asyncio
 import time
