@@ -36,11 +36,7 @@ def main():
     command = registry.get_command(input_cmd)
 
     if command:
-        try:
             safe_execute(command, *sys.argv[2:])
-        except Exception as e:
-            logging.error(f"Ошибка при выполнении команды '{input_cmd}': {e}", exc_info=True)
-            print(f"{Fore.RED}✘ Произошла ошибка. Подробности в errors.log{Style.RESET_ALL}")
     else:
         print(f"{Fore.LIGHTRED_EX}Неизвестная команда: {input_cmd}{Style.RESET_ALL}")
         suggest_command(registry, input_cmd)

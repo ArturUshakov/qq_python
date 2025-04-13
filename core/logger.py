@@ -20,7 +20,6 @@ def log_exception(e):
 
 def safe_execute(command, *args):
     try:
-        logging.debug(f"Выполнение команды: {command} с аргументами {args}")
         command.execute(*args)
     except Exception as e:
         print(Fore.LIGHTRED_EX + f"⚠️ Ошибка: {e}" + Style.RESET_ALL)
