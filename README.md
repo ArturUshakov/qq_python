@@ -65,8 +65,8 @@ Each push to the `master` branch triggers a GitHub Action that builds and publis
 In the folder with the downloaded files:
 
 ```bash
-chmod +x qq-setup.sh
-./qq-setup.sh
+chmod +x install-linux.sh
+./install-linux.sh
 ```
 
 The script will:
