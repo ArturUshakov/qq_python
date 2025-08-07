@@ -30,12 +30,18 @@ jobs:
       - run: |
           python3 cli.py
           python3 -m nuitka cli.py --onefile --output-dir=output --output-filename=qq --static-libpython=yes
-          mv output/qq output/qq-linux
+
+          mkdir -p qq-linux
+          mv output/qq qq-linux/qq
+          cp qq_completions.sh qq-linux/
+          cp install-linux.sh qq-linux/
+          cd qq-linux
+          zip -r ../qq-linux.zip ./*
 
       - uses: actions/upload-artifact@v4
         with:
           name: qq-linux
-          path: output/qq-linux
+          path: qq-linux.zip
 
   build-macos:
     runs-on: macos-latest
@@ -53,16 +59,21 @@ jobs:
 
       - run: |
           python3 cli.py
-          NUITKA_CCACHE_BINARY=none python3 -m nuitka cli.py --onefile --output-dir=output --output-filename=qq
-          mv output/qq output/qq-macos
+          python3 -m nuitka cli.py --standalone --output-dir=output
+
+          mv output/cli.dist qq-macos
+          cp qq_completions.zsh qq-macos/
+          cp install-macos.sh qq-macos/
+          cd qq-macos
+          zip -r ../qq-macos.zip ./*
 
       - uses: actions/upload-artifact@v4
         with:
           name: qq-macos
-          path: output/qq-macos
+          path: qq-macos.zip
 
   release:
-    needs: [ build-linux, build-macos ]
+    needs: [build-linux, build-macos]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -77,19 +88,13 @@ jobs:
           name: qq-macos
           path: ./dist
 
-      - name: Copy extra scripts to dist
-        run: |
-          cp qq_completions.sh qq-setup.sh dist/
-
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ github.ref_name }}
           name: "Release ${{ github.ref_name }}"
           files: |
-            dist/qq-linux
-            dist/qq-macos
-            dist/qq_completions.sh
-            dist/qq-setup.sh
+            dist/qq-linux.zip
+            dist/qq-macos.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
